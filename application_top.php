@@ -3,7 +3,5 @@
 namespace Antevasin;
 
 \plugins::include_part( 'functions' );
-$plugin_name = basename( __DIR__ );
-define( 'PLUGIN_NAME', $plugin_name );
-require( "plugins/{$plugin_name}/includes/classes/plugin.php" );
-$antevasin = new plugin();
+
+// try to not add any additinal code to this file. use the application_core, plugin or module class files
