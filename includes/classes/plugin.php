@@ -21,6 +21,7 @@ class plugin
         $this->require_languages();
         $this->require_functions();
         $this->require_classes();
+        $this->require_modules();
     }  
     
     // setter functions
@@ -31,7 +32,10 @@ class plugin
     
     private function set_plugin_info()
     {
-        $this->plugin_info = json_decode( file_get_contents( $this->plugin_path . 'plugin.json' ), true );
+        $this->plugin_info = json_decode( file_get_contents( $this->plugin_path . 'plugin.json' ) );
+        define( 'PLUGIN_VERSION', $this->plugin_info->version );
+        define( 'PLUGIN_DESCRIPTION', $this->plugin_info->description );
+        define( 'PLUGIN_SOURCE', $this->plugin_info->source );
     }
   
     private function set_core_path()
@@ -46,19 +50,31 @@ class plugin
 
     private function set_modules()
     {
-        $dirs = glob( $this->plugin_path . 'modules/*', GLOB_ONLYDIR );
-        $modules = array();
-        foreach ( $dirs as $dir )
+        // $dirs = glob( $this->plugin_path . 'modules/*', GLOB_ONLYDIR );
+        // $modules = array();
+        // foreach ( $dirs as $dir )
+        // {
+        //     $module_name = basename( $dir );
+        //     $module_info = $module_info = json_decode( file_get_contents( $dir . '/module.json' ), true );
+        //     $module_data = array(
+        //         'name' => $module_name,
+        //         'app_path' => PLUGIN_NAME . '/' . $module_name . '/',
+        //         'path' => $dir . '/',
+        //         'info' => $module_info,
+        //     );
+        //     $modules[$module_name] = $module_data;
+        //     if ( $module_name === 'core' )
+        //     {
+        //         // $this->core = $module_data;
+        //     }
+        //     else 
+        //     {
+        //         // $modules[$module_name] = $module_data;
+        //     }
+        // }
+        $modules = get_plugin_modules( $this->plugin_path );
+        foreach ( $modules as $module_name => $module )
         {
-            $module_name = basename( $dir );
-            $module_info = $module_info = json_decode( file_get_contents( $dir . '/module.json' ), true );
-            $module_data = array(
-                'name' => $module_name,
-                'app_path' => PLUGIN_NAME . '/' . $module_name . '/',
-                'path' => $dir . '/',
-                'info' => $module_info,
-            );
-            $modules[$module_name] = $module_data;
             if ( $module_name === 'core' )
             {
                 // $this->core = $module_data;
@@ -66,7 +82,7 @@ class plugin
             else 
             {
                 // $modules[$module_name] = $module_data;
-            }
+            }    
         }
         $this->modules = $modules;
         // $this->all_modules = array_merge( array( 'core' => $this->core ), $this->modules );
@@ -115,12 +131,34 @@ class plugin
     
     private function require_classes()
     {
+        $class_files = glob( PLUGIN_PATH . 'includes/classes/*.php' );
+        foreach ( $class_files as $class_file )
+        {
+            $class_name = basename( $class_file, '.php' );
+            if ( $class_name == 'plugin' ) continue;
+            require_once $class_file;
+        }
         require_once $this->core_path . 'includes/classes/core.php';
         foreach ( $this->modules as $module_name => $module )
         {
             if ( is_file( $classes_file = $module['path'] . 'includes/classes/' . $module_name . '.php' ) )
             {        
                 require_once $classes_file;
+            }   
+        }  
+    }
+
+    private function require_modules()
+    {
+        foreach ( $this->modules as $module_name => $module )
+        {
+            if ( is_file( $module_file = $module['path'] . 'application_core.php' ) )
+            {      
+                require_once $module_file;
+            }   
+            if ( is_file( $module_file = $module['path'] . 'application_top.php' ) )
+            {      
+                require_once $module_file;
             }   
         }  
     }

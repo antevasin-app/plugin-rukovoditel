@@ -14,11 +14,14 @@ foreach ( $this_plugin->get_modules( false ) as $name => $module )
     
     // load module .js.php files if they exist in the module components directory
     $module_head_js_file = $module['app_path'] . $name . '.js';
-    if ( component_path( $module_head_js_file ) )
+    if ( file_exists( $module['path'] . 'components/' . $name . '.js.php' ) )
     {    
-        echo '<script>';
-            require component_path( $module_head_js_file );
-        echo '</script>';
+        if ( component_path( $module_head_js_file ) )
+        {    
+            echo '<script>';
+                require component_path( $module_head_js_file );
+            echo '</script>';
+        }
     }
 }
 

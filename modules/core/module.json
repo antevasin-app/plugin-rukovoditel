@@ -1,8 +1,8 @@
 {
   "title": "Core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "status": "core",
   "date": 1716589100,
-  "source": "antevasin.app",
+  "source": "antevasin-app/plugin-rukovoditel",
   "description": "Core configuration module for the Antevasin Plugin"
 }

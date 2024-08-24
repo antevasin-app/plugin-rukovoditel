@@ -46,7 +46,6 @@ class menus
                 require $module['path'] . 'menu.php';
             }
         }
-        // print_rr( $sidebar_menus );
         return $sidebar_menus;
     }
 }
