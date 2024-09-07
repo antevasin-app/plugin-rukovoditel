@@ -315,17 +315,6 @@ class core implements module
         return $curl_response;        
     }
 
-    private function get_release_latest()
-    {
-        $headers = array(
-            "User-Agent: Antevasin-App",
-            "Accept: application/vnd.github+json",
-            "Authorization: token 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"
-        );
-        $info = $this->curl_get( 'https://api.github.com/repos/antevasin-app/module-hauora/releases/latest', $headers );
-        print_rr(json_decode( $info ));
-    }
-
     // entity functions
 
     protected function get_entities()
@@ -433,7 +422,6 @@ class core implements module
 
     public function module_management()
     {
-        // $this->get_release_latest();
         $modules = get_plugin_modules( PLUGIN_PATH );
         $installed_modules = '';
         foreach ( $modules as $module_name => $module )

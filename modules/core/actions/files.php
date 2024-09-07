@@ -125,6 +125,5 @@ function remove_dir( $dir )
             unlink( $file->getPathname() );
         }
     }
-    // unlink( $local_zip_file );
     rmdir( $dir );
 }
