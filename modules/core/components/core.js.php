@@ -57,8 +57,12 @@ var core = core || {
         $( '#module_menus_all_menus' ).trigger( 'change' );
         $( '#submit_config' ).on( 'click', function( event ) {
             event.preventDefault();
-            let config_obj = $( '#cfg' ).serializeJSON();
-            console.log(config_obj);
+            // let config = {'module':'test','token':'123456','access':{admin:{'groups':'users','users':''}}}
+            let config = JSON.parse( $( '#current_config' ).val() );
+            let form_config = $( '#cfg' ).serializeJSON();
+            console.log(config,form_config);
+            $.extend( config, form_config.module );
+            console.log(config);
             // if ( common_icon_flag ) {
             //     let common_icon = $( '#settings_module_' + module_name + '_menus_icon' ).val();
             //     $( '** input[id^=settings][id$=icon]' ).val( common_icon );
@@ -66,15 +70,14 @@ var core = core || {
             // allow for empty config values to be saved so they don't disappear
             // for ( var key in module_access_settings ) {
             //     if ( module_access_settings.hasOwnProperty( key ) ) {
-            //         if ( !object_has_property( config_obj, module_access_settings[key] ) ) {
-            //             object_set_property( config_obj, module_access_settings[key], '' );
+            //         if ( !object_has_property( form_config, module_access_settings[key] ) ) {
+            //             object_set_property( form_config, module_access_settings[key], '' );
             //         }
             //     }
             // }
-            // console.log(config_obj);
-            let module_name = config_obj.module_name.toUpperCase();
+            let module_name = config.module.toUpperCase();
             console.log(module_name);
-            let config_json = JSON.stringify( config_obj.module );
+            let config_json = JSON.stringify( config );
             console.log(config_json)
             $( `#CFG_MODULE_${module_name}_CONFIG` ).val( config_json );
             $( '#cfg' ).submit();
@@ -123,24 +126,29 @@ var core = core || {
         let module = $( element ).data( 'module' );
         let file_url = $( element ).data( 'file_url' );
         let private = $( element ).data( 'private' );
-        switch ( action ) {
-            case 'install':
-                break;
-            case 'reinstall':
-                break;
-            case 'download':
-                break;
-            default:
-                break;
+        let source_token = $( element ).data( 'source_token' );
+        let data = {
+            module_name: module,
+            file_url: file_url,
+            private: private,
+            source_token: source_token
         }
-        // console.log(action);
-        // console.log(element,module,core.files_url,url);
+        console.log(action)
         if ( action == 'download' ) {
-            console.log('download');
-            let url = `${core.files_url}&action=${action}&module_name=${module}&file_url=${file_url}&private=${private}`;
-            core.ajax_get( url );
+            let callback = function( response ) {
+                if ( response != '') {
+                    let response_obj = JSON.parse( response );
+                    if ( response_obj.success && response_obj.download_url ) {
+                        window.location = response_obj.download_url;
+                    }
+                }   
+            }
+            let url = `${core.files_url}&action=${action}`;
+            // core.ajax_get( url, callback );
+            core.ajax_post( url, data, callback );
         } else {
-            let url = `http://localhost/plugin/index.php?module=antevasin/core/files&module_action=${action}&module_name=${module}`;
+            let url = `http://localhost/plugin/index.php?module=antevasin/core/files&module_action=${action}&module_name=${module}&file_url=${file_url}&private=${private}`;
+            console.log(element,action,module,core.files_url,file_url,url,private);
             open_dialog( url );
         }
         // return false;

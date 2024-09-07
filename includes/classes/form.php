@@ -105,9 +105,10 @@ class form
                         foreach ( $section['groups'] as $group ) {
                             $form_group_label_class = ( isset( $group['label_class'] ) ) ? $group['label_class'] : '';
                             $form_group_field_class = ( isset( $group['field_class'] ) ) ? $group['field_class'] : '';
+                            $label = ( isset( $group['label'] ) ) ? '<label class="col-md-3 control-label ' . $form_group_label_class . '">' . $group['label'] . '</label>' : '';
                             $form_groups .= <<<FORM_GROUP
                             <div class="form-group $form_group_class">
-                                <label class="col-md-3 control-label $form_group_label_class">{$group['label']}</label>
+                                $label
                                 <div class="col-md-9 $form_group_field_class">
                                     {$group['field']}
                                 </div>

@@ -136,8 +136,20 @@ class core implements module
 
     public function module_index_tabs( form $form )
     {
-        if ( $this->get_config()->module == 'core' )
+        if ( get_class( $this ) == 'Antevasin\core' )
         {
+            $source = $this->get_info()->source;
+            $file_url = 'https://api.github.com/repos/' . $this->get_info()->source . '/zipball/v' . $this->get_info()->version;
+            $private = ( isset( $this->get_info()->token ) ) ? 1 : 0;
+            $reinstall_link = $this->get_reinstall_link();
+            $is_link_dir = PLUGIN_PATH . 'application_core.php';
+            // print_rr($is_link_dir);
+            if ( is_link( $is_link_dir ) )
+            {
+                // $_SESSION['alerts']->messages[] = array('params' => 'class="alert alert-danger"',  'text' => "Download aborted as destination directory is a symbolic link" );
+                // die( '{"error":"Download aborted as destination directory is a symbolic link"}' ); 
+                $reinstall_link = '';
+            }
             $plugin_settings = array(
                 'title' => 'Plugin Settings',
                 'groups' => array(
@@ -149,7 +161,7 @@ class core implements module
                     array(     
                         'label' => 'Installed Version',
                         'field_class' => 'plugin-info',
-                        'field' => PLUGIN_VERSION . '<a style="padding: 0 10px 0 10px;" href="https://api.github.com/repos/' . PLUGIN_SOURCE . '/zipball/v' . PLUGIN_VERSION . '"><i class="fa fa-download"></i></a>' . $this->get_reinstall_link( 'core' )
+                        'field' => PLUGIN_VERSION . '<a style="padding: 0 10px 0 10px;" data-action="download" data-module="core" data-source="' . $source . '" data-file_url="' . $file_url . '" data-private="' . $private . '" onclick="core.files( this )"><i class="fa fa-download"></i></a>' . $reinstall_link
                     ),
                     array(     
                         'label' => 'Plugin Source',
@@ -163,7 +175,7 @@ class core implements module
                     ),
                     array(  
                         'label' => 'Licence Key',
-                        'field' => $form->add_tag( 'input', 'module[key]', null, 123456789 )
+                        'field' => $form->add_tag( 'input', 'module[key]', null, 123456789, array( 'size' => 'x-large' ) )
                     )
                 )
             );
@@ -372,6 +384,7 @@ class core implements module
             $this->config = array(
                 'module' => $this->name,
                 'notes' => '',
+                'token' => '',
                 'access' => array(
                     'admin' => array(
                         'groups' => '',
@@ -425,19 +438,27 @@ class core implements module
         $installed_modules = '';
         foreach ( $modules as $module_name => $module )
         {
-            // print_rr($module['info']); print_rr($module);
+            // print_rr($module);
             $source = $module['info']['source'];
             $version = $module['info']['version'];
             $file_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
-            $private = ( isset( $module['info']['token'] ) ) ? 1 : 0;
+            $token = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? $module['config']['token'] : '';
+            $private = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? 1 : 0;
+            $data_attributes = <<<DATA
+                data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private="$private" data-source_token="$token"
+            DATA;
             $module_info = <<<INFO
-                <div class="module-info" id="module_{$module['name']}" data-action="install" data-path="{$module['path']}" data-version="{$version}" data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private=$private onclick="core.files( this )">Install Version</div>
+                <div class="module-info" id="module_{$module['name']}" data-action="install" data-path="{$module['path']}" data-version="{$version}" data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private=$private  onclick="core.files( this )">Install Version Test</div>
             INFO;
-            $download_link = <<<LINK
-                <a style="padding: 0 10px 0 10px;" data-action="download" data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private=$private onclick="core.files( this )"><i class="fa fa-download"></i></a>
-            LINK;
+            $download_link = <<<DOWNLOAD
+                <a style="padding: 0 10px 0 10px;" data-action="download" $data_attributes onclick="core.files( this )"><i class="fa fa-download"></i></a>
+            DOWNLOAD;
             $download = ( $module['name'] == 'core' ) ? '' : $download_link;
-            $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
+            $reinstall_link = <<<REINSTALL
+                <a class="action" data-action="reinstall" $data_attributes onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
+            REINSTALL;
+            // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
+            $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
             // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
             $installed_modules .= '
                 <li>
@@ -477,7 +498,7 @@ class core implements module
         <script type="module">
             import { Octokit, App } from "https://esm.sh/octokit";
             const octokit = new Octokit({
-                auth: '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'
+                auth: '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'
             })
             const settings = {
                 // owner: 'antevasin-app',
@@ -488,16 +509,25 @@ class core implements module
             }
             const info = await octokit.request( `GET /repos/antevasin-app/module-hauora/releases/latest`, settings )
             if ( info.status == 200 ) {
-                console.log(info.data)
+                // console.log(info.data)
             }
         </script>
         HTML;        
         return $html;
     }
 
-    public function get_reinstall_link( $module_name ) : string
+    public function get_reinstall_link() : string
     {
-        return '<a class="action" data-action="reinstall" data-module="' . $module_name . '" onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>'; 
+        // die(print_rr($this));
+        $module_name = $this->get_name();
+        $source = $this->get_info()->source;
+        $file_url = 'https://api.github.com/repos/' . $this->get_info()->source . '/zipball/v' . $this->get_info()->version;
+        $private = ( isset( $this->get_info()->token ) ) ? 1 : 0;
+        $link = <<<LINK
+            <a class="action" data-action="reinstall" data-module="$module_name" data-source="$source" data-file_url="$file_url" data-private="$private" onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
+        LINK;
+        // return '<a class="action" data-action="reinstall" data-module="' . $module_name . '" data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private="$private" onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>'; 
+        return $link;
     }
 
     public function get_source_script()

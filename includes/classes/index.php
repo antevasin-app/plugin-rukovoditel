@@ -25,8 +25,10 @@ class index
         $form = new form( $this->module );
         $form->set_id ( 'cfg' );
         $form->set_action ( url_for( 'configuration/save', "redirect_to=" . PLUGIN_NAME . "/{$this->module->get_name()}/index" ) );
-        $form->set_title ( $this->title, $this->title_link );   
+        $form->set_title ( $this->title, $this->title_link );  
         $this->module->module_index_tabs( $form );
+        $config = $this->module->get_config();
+        $token = ( isset( $config->token ) ) ? $config->token : '';
         $tabs = array( 
             array(
                 'name' => 'module',
@@ -54,12 +56,23 @@ class index
                             ),
                             array(
                                 'field_class' => 'plugin-info',
+                                'label' => 'Token',
+                                'field' => $form->add_tag( 'input', 'module[token]', null, $token, array( 'size' => 'x-large' ) )
+                            ),
+                            array(
+                                'field_class' => 'plugin-info',
                                 'label' => 'Module Description',
                                 'field' => $this->module->get_info()->description
                             ),
                             array(
                                 'label' => 'Module Notes',
-                                'field' => $form->add_tag( 'textarea', 'module[notes]', null, '', array( 'size' => 'xlarge' ) )
+                                'field' => $form->add_tag( 'textarea', 'module[notes]', null, $config->notes, array( 'size' => 'large' ) )
+                            ),
+                            array( 
+                                'field' => $form->add_tag( 'input_hidden', 'CFG[MODULE_' . strtoupper( $this->module->get_name() ) . '_CONFIG]', null, '', array( 'size' => 'large' ) )
+                            ),
+                            array( 
+                                'field' => $form->add_tag( 'input_hidden', 'current_config', null, json_encode( $config ), array( 'size' => 'large' ) )
                             ),
                         )
                     ),
