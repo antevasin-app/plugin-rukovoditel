@@ -486,7 +486,7 @@ class core implements module
         <script type="module">
             import { Octokit, App } from "https://esm.sh/octokit";
             const octokit = new Octokit({
-                auth: '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'
+                auth: ''
             })
             const settings = {
                 // owner: 'antevasin-app',
