@@ -7,17 +7,16 @@ class plugin
     // private properties
     private $plugin_path;
     private $plugin_info;
-    private $plugin_user_id;
     private $core_path;
     private $modules;
     
     function __construct()
     {        
+        // print_rr('in antevasin plugin class constructor');
         $this->set_plugin_path();
         $this->set_plugin_info();
         $this->set_core_path();
         $this->set_modules();
-        $this->set_plugin_user_id();
         $this->require_languages();
         $this->require_functions();
         $this->require_classes();
@@ -87,13 +86,38 @@ class plugin
         $this->modules = $modules;
         // $this->all_modules = array_merge( array( 'core' => $this->core ), $this->modules );
     }
-    
-    private function set_plugin_user_id()
+      
+    public function set_user_access()
     {
-        $this->plugin_user_id = 4;
-        if ( !defined( 'PLUGIN_USER_ID' ) ) define( 'PLUGIN_USER_ID', $this->plugin_user_id );
-    } 
-    
+        global $app_user;
+
+        $is_system_admin = $is_plugin_admin = $is_module_user = false;
+        if ( isset( $app_user ) )
+        {
+            if ( $app_user['group_id'] === 0 )
+            {
+                $is_system_admin = true;
+                $is_plugin_admin = true;
+                $is_module_user = true;
+            }
+            if ( false )
+            {
+                // check plugin settings
+                $is_plugin_admin = true;
+                $is_module_user = true;
+            }
+        }
+        if ( \guest_login::is_guest() )
+        {
+            $is_module_user = true;
+        }
+        if ( !defined( 'IS_SYSTEM_ADMIN' ) ) define( 'IS_SYSTEM_ADMIN', $is_system_admin );
+        if ( !defined( 'IS_PLUGIN_ADMIN' ) ) define( 'IS_PLUGIN_ADMIN', $is_plugin_admin );
+        if ( !defined( 'IS_MODULE_USER' ) ) define( 'IS_MODULE_USER', $is_module_user );
+        $plugin_user_id = 4;
+        if ( !defined( 'PLUGIN_USER_ID' ) ) define( 'PLUGIN_USER_ID', $plugin_user_id );
+    }
+
     // getter functions
 
     public function get_modules( $exclude_core = true )
@@ -162,10 +186,4 @@ class plugin
             }   
         }  
     }
-
-    public function plugin_sidebar_menu()
-    {   
-        $menu = new menus( $this );
-    }
-
 }

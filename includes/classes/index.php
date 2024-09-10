@@ -61,6 +61,11 @@ class index
                             ),
                             array(
                                 'field_class' => 'plugin-info',
+                                'label' => 'Token Expiry',
+                                'field' => $form->add_tag( 'input', 'module[token_expiry]', null, $config->token_expiry, array( 'size' => 'medium' ) )
+                            ),
+                            array(
+                                'field_class' => 'plugin-info',
                                 'label' => 'Module Description',
                                 'field' => $this->module->get_info()->description
                             ),

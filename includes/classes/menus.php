@@ -5,9 +5,11 @@ namespace Antevasin;
 class menus
 {
     private $plugin;
+    private $core;
 
     public function __construct( plugin $plugin )
     {
+        // print_rr('menus class constructor');
         $this->plugin = $plugin;
     }
 
@@ -21,14 +23,17 @@ class menus
             'submenu' => $plugin_module_links 
         );
         $plugin_sidebar = $this->plugin_modules_sidebar_menus();
-        $plugin_sidebar[] = $plugin_menu;
+        if ( IS_SYSTEM_ADMIN )
+        {
+            $plugin_sidebar[] = $plugin_menu;
+        }
         return $plugin_sidebar;
     }
 
     public function plugin_module_links()
     {
         $module_links = array();
-        foreach ( $this->plugin->get_modules( false ) as $name => $module )
+        foreach ( get_plugin_modules( PLUGIN_PATH ) as $name => $module )
         {
             $module_links[] = array( 'title' => $name, 'url' => url_for( $module['app_path'] . 'index' ), 'class' => 'fa-plug' );
         }
@@ -38,7 +43,7 @@ class menus
     public function plugin_modules_sidebar_menus()
     {
         $sidebar_menus = array();
-        foreach ( $this->plugin->get_modules( false ) as $name => $module )
+        foreach ( get_plugin_modules( PLUGIN_PATH ) as $name => $module )
         {
             // $sidebar_menus[] = array( 'title' => $name, 'url' => url_for( $module['app_path'] . 'index' ), 'class' => 'fa-plug' );
             if ( is_file( $module['path'] . 'menu.php' ) )
