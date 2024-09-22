@@ -51,7 +51,7 @@ function install( $module )
     $result = curl_exec($ch);
     if( !$result ) {
         // handle errors
-        die("Error :- " . curl_error( $ch ));
+        die("Curl Error :- " . curl_error( $ch ));
     }   
     $zip = new \ZipArchive;
     $res = $zip->open( $local_zip_file, \ZipArchive::CREATE );

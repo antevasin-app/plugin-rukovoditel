@@ -3,3 +3,8 @@
     font-weight: bold;
     padding-top: 8px;
 }
+
+.place-autocomplete-element-row .place-autocomplete-element-text-div .place-autocomplete-element-place-name {
+    font-size: 15px !important;
+    /* font-family: Times New Roman !important; */
+}

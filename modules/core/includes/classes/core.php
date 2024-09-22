@@ -11,9 +11,6 @@ class core implements module
     private $app_user;
     private $user_id;
     private $user_group_ids;
-    private $is_system_admin = false;
-    private $is_plugin_admin = false;
-    private $is_module_user = false;
     private $user_settings;
     private $entities;
     private $data;
@@ -30,6 +27,7 @@ class core implements module
     {
         global $app_user;
 
+        // print_rr('core module class constructor');
         $this->data = array_merge( $_GET, $_POST );   
         $this->plugin_name = PLUGIN_NAME;
         $this->plugin_path = PLUGIN_PATH;
@@ -42,29 +40,34 @@ class core implements module
         $this->app_path = PLUGIN_NAME . "/$this->name/";
         $this->set_config();
         $this->set_info();
+        // print_rr("system admin is " . IS_SYSTEM_ADMIN .", plugin admin is " . IS_PLUGIN_ADMIN . ", module user is " . IS_MODULE_USER . ", plugin user id is " . PLUGIN_USER_ID);
+        // die(print_rr('pause'));
+        if ( !IS_MODULE_USER ) redirect_to( 'dashboard/access_forbidden' );
         if ( isset( $app_user ) )  
         {  
             $this->app_user = $app_user;
             $this->user_id = $app_user['id'];
             $this->user_group_ids = $this->get_user_group_ids();
-            $this->is_plugin_admin();
-            if ( !$this->is_module_user() ) redirect_to('dashboard/access_forbidden' );
             $this->get_user_settings();
             $this->set_error_reporting();
         }
     }
 
-    // setter functions
-
+    // setter functions 
     public function set_info()
     {
         $this->info = $this->get_module_info();
     }
-
+    
     public function set_config()
     {
         $this->config = $this->get_module_config();
     }
+
+    public function set_data( $data )
+    {
+        $this->data = $data;
+    }   
 
     public function add_data( $data )
     {
@@ -194,12 +197,12 @@ class core implements module
         }
     }
 
-    private function is_plugin_admin()
+    private function is_plugin_admin_()
     {
         if ( $this->app_user['group_id'] === 0 )
         {
-            $this->is_plugin_admin = true;
             $this->is_system_admin = true;
+            $this->is_plugin_admin = true;
             $this->is_module_user = true;
         }
         if ( false )
@@ -215,12 +218,12 @@ class core implements module
         return $this->is_plugin_admin;
     }
 
-    public function is_system_admin()
+    public function is_system_admin_()
     {
         return $this->is_system_admin;
     } 
 
-    public function is_module_user()
+    public function is_module_user_()
     {
         return $this->is_module_user;
     }
@@ -240,7 +243,7 @@ class core implements module
         if ( empty( $this->user_settings ))
         {
             $this->user_settings = array();
-            if ( $this->is_system_admin )
+            if ( IS_SYSTEM_ADMIN )
             {
                 $admin_settings = array(
                     'error_reporting' => 0,  
@@ -258,7 +261,7 @@ class core implements module
 
     private function set_error_reporting()
     {
-        if ( $this->is_system_admin && $this->user_settings['error_reporting'] )
+        if ( IS_SYSTEM_ADMIN && $this->user_settings['error_reporting'] )
         {
             error_reporting( E_ALL );
             ini_set( 'display_errors', 1 );
@@ -352,6 +355,52 @@ class core implements module
         }
     }
 
+    public function update_entities()
+    {
+        // print_rr('in update_entities function');
+        $this->get_entities();
+        $entities_entity_id = $this->get_entity_id( 'entities' );
+        if ( $entities_entity_id > 0 )
+        {
+            // print_rr("entitities id is $entities_entity_id");
+            $sql = "SELECT * FROM app_entity_{$entities_entity_id}";
+            $user_query = db_query( $sql );
+            // print_rr($sql); print_rr($user_query);
+            $existing_entities = array();
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                // print_rr($results);
+                $entity_id = $results['id'];
+                // $group_id = $this->entities[$entity_id]['group_id'];
+                $existing_entities[$entity_id] = $results;
+            }
+            // print_rr($existing_entities);
+            foreach ( $this->entities as $entity_id => $info )
+            {
+                if ( !isset( $existing_entities[$entity_id] ) )
+                {
+                    print_rr("add item to entity with id $entity_id");
+                    $now = time();
+                    $title_field_id = $this->get_field_id( $entities_entity_id, 'title' );
+                    $include_field_id = $this->get_field_id( $entities_entity_id, 'include' );
+                    $exclude_entities = array( 
+                        $this->get_entity_id( 'entities' ), 
+                        $this->get_entity_id( 'statuses')
+                    );
+                    $include = ( in_array( $entity_id, $exclude_entities ) ) ? 'false' : 'true';
+                    $sql = "
+                        INSERT INTO `app_entity_$entities_entity_id`
+                        ( `id`, `parent_id`, `parent_item_id`, `linked_id`, `date_added`, `date_updated`, `created_by`, `sort_order`, `field_$title_field_id`, `field_$include_field_id` ) 
+                        VALUES 
+                        ( $entity_id, 0, 0, 0, $now, 0, 1, 0, '{$info['name']}', '$include' )
+                    ";
+                    // print_rr($sql);
+                    db_query( $sql );
+                }
+            }
+        }
+    }
+
     // module functions
     public function get_module_info( $path = false )
     {
@@ -374,6 +423,7 @@ class core implements module
                 'module' => $this->name,
                 'notes' => '',
                 'token' => '',
+                'token_expiry' => '',
                 'access' => array(
                     'admin' => array(
                         'groups' => '',
@@ -484,21 +534,21 @@ class core implements module
             }
         </style>
         <script type="module">
-            import { Octokit, App } from "https://esm.sh/octokit";
-            const octokit = new Octokit({
-                auth: ''
-            })
-            const settings = {
-                // owner: 'antevasin-app',
-                // repo: 'module-hauora',
-                headers: {
-                    'Accept': 'application/vnd.github+json'
-                }
-            }
-            const info = await octokit.request( `GET /repos/antevasin-app/module-hauora/releases/latest`, settings )
-            if ( info.status == 200 ) {
-                // console.log(info.data)
-            }
+            // import { Octokit, App } from "https://esm.sh/octokit";
+            // const octokit = new Octokit({
+            //     auth: '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'
+            // })
+            // const settings = {
+            //     // owner: 'antevasin-app',
+            //     // repo: 'module-hauora',
+            //     headers: {
+            //         'Accept': 'application/vnd.github+json'
+            //     }
+            // }
+            // const info = await octokit.request( `GET /repos/antevasin-app/module-hauora/releases/latest`, settings )
+            // if ( info.status == 200 ) {
+            //     // console.log(info.data)
+            // }
         </script>
         HTML;        
         return $html;
@@ -679,31 +729,177 @@ class core implements module
         }
 
     }
-}
 
-class core_old extends plugin
-{   
-    function __construct( $data = array() )
+    public function get_map_markers()
     {
-
-    }
-
-    // entity functions
-    private function get_entity_info()
-    {
-        $sql = "SELECT * FROM app_entities_configuration WHERE entities_id={$this->entity_id}";
-        if ( $result = db_fetch_array( db_query( $sql ) ) )
+        // print_rr('in get_map_markers function');
+        // print_rr($this->data);
+        $sql = "SELECT * FROM app_entities WHERE name='map_markers'";
+        $data = array(
+            array(
+                'address' => "215 Emily St, MountainView, CA",
+                'description' => "Single family house with modern design",
+                'price' => "$ 3,889,000",
+                'type' => "home",
+                'bed' => 5,
+                'bath' => 4.5,
+                'size' => 300,
+                'position' => array(
+                    'lat' => 37.50024109655184,
+                    'lng' => -122.28528451834352,
+                ),
+            ),
+            array(
+                'address' => "108 Squirrel Ln &#128063;, Menlo Park, CA",
+                'description' => "Townhouse with friendly neighbors",
+                'price' => "$ 3,050,000",
+                'type' => "building",
+                'bed' => 4,
+                'bath' => 3,
+                'size' => 200,
+                'position' => array(
+                    'lat' => 37.44440882321596,
+                    'lng' => -122.2160620727,
+                ), 
+            ),
+            array(
+                'address' => "100 Chris St, Portola Valley, CA",
+                'description' => "Spacious warehouse great for small business",
+                'price' => "$ 3,125,000",
+                'type' => "warehouse",
+                'bed' => 4,
+                'bath' => 4,
+                'size' => 800,
+                'position' => array(
+                    'lat' => 37.39561833718522,
+                    'lng' => -122.21855116258479,
+                ),
+            ),
+            array(
+                'address' => "98 Aleh Ave, Palo Alto, CA",
+                'description' => "A lovely store on busy road",
+                'price' => "$ 4,225,000",
+                'type' => "store-alt",
+                'bed' => 2,
+                'bath' => 1,
+                'size' => 210,
+                'position' => array(
+                    'lat' => 37.423928529779644,
+                    'lng' => -122.1087629822001,
+                ),
+            ),
+            array(
+                'address' => "2117 Su St, MountainView, CA",
+                'description' => "Single family house near golf club",
+                'price' => "$ 1,700,000",
+                'type' => "home",
+                'bed' => 4,
+                'bath' => 3,
+                'size' => 200,
+                'position' => array(
+                    'lat' => 37.40578635332598,
+                    'lng' => -122.15043378466069,
+                ),
+            ),
+            array(
+                'address' => "197 Alicia Dr, Santa Clara, CA",
+                'description' => "Multifloor large warehouse",
+                'price' => "$ 5,000,000",
+                'type' => "warehouse",
+                'bed' => 5,
+                'bath' => 4,
+                'size' => 700,
+                'position' => array(
+                    'lat' => 37.36399747905774,
+                    'lng' => -122.10465384268522,
+                ),
+            ),
+            array(
+                'address' => "700 Jose Ave, Sunnyvale, CA",
+                'description' => "3 storey townhouse with 2 car garage",
+                'price' => "$ 3,850,000",
+                'type' => "building",
+                'bed' => 4,
+                'bath' => 4,
+                'size' => 600,
+                'position' => array(
+                    'lat' => 37.38343706184458,
+                    'lng' => -122.02340436985183,
+                ),
+            ),
+            array(
+                'address' => "868 Will Ct, Cupertino, CA",
+                'description' => "Single family house in great school zone",
+                'price' => "$ 2,500,000",
+                'type' => "home",
+                'bed' => 3,
+                'bath' => 2,
+                'size' => 100,
+                'position' => array(
+                    'lat' => 37.34576403052,
+                    'lng' => -122.04455090047453,
+                ),
+            ),
+            array(
+                'address' => "655 Haylee St, Santa Clara, CA",
+                'description' => "2 storey store with large storage room",
+                'price' => "$ 2,500,000",
+                'type' => "store-alt",
+                'bed' => 3,
+                'bath' => 2,
+                'size' => 450,
+                'position' => array(
+                    'lat' => 37.362863347890716,
+                    'lng' => -121.97802139023555,
+                ),
+            ),
+            array(
+                'address' => "2019 Natasha Dr, San Jose, CA",
+                'description' => "Single family house",
+                'price' => "$ 2,325,000",
+                'type' => "home",
+                'bed' => 4,
+                'bath' => 3.5,
+                'size' => 500,
+                'position' => array(
+                    'lat' => 37.41391636421949,
+                    'lng' => -121.94592071575907,
+                ),
+            ),
+        );
+        foreach ( $data as $index => $marker )
         {
-            $this->entity_info = $result;
+            $html = <<<HTML
+                <div class="icon">
+                    <i aria-hidden="true" class="fa fa-icon fa-{$marker['type']}" title="{$marker['description']}"></i>
+                    <span class="fa-sr-only">{$marker['type']}</span>
+                </div>
+                <div class="details">
+                    <div class="price">{$marker['price']}</div>
+                    <div class="address">{$marker['address']}</div>
+                    <div class="features">
+                        <div>
+                            <i aria-hidden="true" class="fa fa-bed fa-lg bed" title="bedroom"></i>
+                            <span class="fa-sr-only">{$marker['bed']}</span>
+                            <span>5</span>
+                        </div>
+                        <div>
+                            <i aria-hidden="true" class="fa fa-bath fa-lg bath" title="bathroom"></i>
+                            <span class="fa-sr-only">{$marker['bath']}</span>
+                            <span>4.5</span>
+                        </div>
+                        <div>
+                            <i aria-hidden="true" class="fa fa-ruler fa-lg size" title="size"></i>
+                            <span class="fa-sr-only">{$marker['description']}</span>
+                            <span>{$marker['description']} ft<sup>2</sup></span>
+                        </div>
+                    </div>
+                </div>
+            HTML;
+            $data[$index]['html'] = $html;
         }
-    }
-
-    public function get_entity_by_name()
-    {
-        $sql = "SELECT * FROM app_entities WHERE name='{$this->entity_name}'";
-        if ( $result = db_fetch_array( db_query( $sql ) ) )
-        {
-            $this->entity_id = $result['id'];
-        }
+        $markers = json_encode( $data );
+        // print_rr($markers);
+        echo '{"success":"in core module get_map_markers function","data":' . $markers . '}';
     }
 }

@@ -4,12 +4,15 @@ namespace Antevasin;
 
 global $app_session_token;
 
+$url = url_for( 'antevasin/core/', 'token=' . $app_session_token );
 $files_url = url_for( 'antevasin/core/files', 'token=' . $app_session_token );
 
 ?>
 
 var core = core || {
+    url: "<?php echo $url; ?>",
     files_url: "<?php echo $files_url; ?>",
+    plugin_path: "<?php echo PLUGIN_PATH; ?>",
     ajax_headers: {},
     expand_pre:function() {
         $( 'pre' ).on( 'click', function() {  
@@ -155,6 +158,209 @@ var core = core || {
     },
     console_response:function( response ) {
         console.log(response);
+    }
+}
+
+var maps = maps || {
+    addresses_map: function() {
+        console.log('in maps addresses_map function') 
+        const data = {
+            name: "addresses_map",
+            div: `<div style="height: 1200px; width: 100%" id="addresses_map"></div>`,
+            center: { lat: 37.43238031167444, lng: -122.16795397128632 },
+            zoom: 11,
+            style: `${core.plugin_path}css/addresses_map.css`,
+            scripts: [
+                "https://use.fontawesome.com/releases/v6.2.0/js/all.js"
+            ],
+        }
+        maps.render( data );
+    },
+    init_google:function() {
+        (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})
+        ({key: "AIzaSyCJue_fSK533hqpKHe5LSSkgizsG9mzyXU", v: "beta"});
+    },
+    add_google_address_lookup:function( fields_obj = {} ) {
+        // maps.add_google_address_lookup({on:239,lat:240,lng:241,visibility:{lat:false,lng:false}});
+        if ( fields_obj.on ) {
+            let on_field = ( Number.isInteger( fields_obj.on ) ) ? `#fields_${fields_obj.on}` : fields_obj.on;
+            var to_field = ( fields_obj.to ) ? fields_obj.to : fields_obj.on;
+            to_field = ( Number.isInteger( to_field ) ) ? `#fields_${to_field}` : to_field;
+            $( on_field ).after( '<div id="google_address_lookup" class="input-large"></div>' )
+            if ( fields_obj.visibility  ) {
+                $( `.form-group-${fields_obj.lat}` ).toggle( fields_obj.visibility.lat )
+                $( `.form-group-${fields_obj.lng}` ).toggle( fields_obj.visibility.lng )
+            }
+            async function init_map() {
+                await google.maps.importLibrary("places");
+                const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement();
+                $( '#google_address_lookup' ).html( placeAutocomplete )
+                
+                placeAutocomplete.addEventListener( "gmp-placeselect", async ({ place }) => {
+                    await place.fetchFields({
+                        fields: ["displayName", "formattedAddress", "location"],
+                    });
+                    const response_obj = place.toJSON();
+                    const address = response_obj.formattedAddress;
+                    $( to_field ).val( address );
+                    if ( fields_obj.lat ) {
+                        $( `#fields_${fields_obj.lat}` ).val( response_obj.location.lat );                        
+                    }
+                    if ( fields_obj.lng ) {
+                        $( `#fields_${fields_obj.lng}` ).val( response_obj.location.lng );
+                    }
+                });
+            }
+            init_map();
+        }
+    },
+    buildContent_:function( property ) {
+        const content = document.createElement("div");
+    
+        content.classList.add("property");
+        content.innerHTML = `
+        <div class="icon">
+            <i aria-hidden="true" class="fa fa-icon fa-${property.type}" title="${property.type}"></i>
+            <span class="fa-sr-only">${property.type}</span>
+        </div>
+        <div class="details">
+            <div class="price">${property.price}</div>
+            <div class="address">${property.address}</div>
+            <div class="features">
+            <div>
+                <i aria-hidden="true" class="fa fa-bed fa-lg bed" title="bedroom"></i>
+                <span class="fa-sr-only">bedroom</span>
+                <span>${property.bed}</span>
+            </div>
+            <div>
+                <i aria-hidden="true" class="fa fa-bath fa-lg bath" title="bathroom"></i>
+                <span class="fa-sr-only">bathroom</span>
+                <span>${property.bath}</span>
+            </div>
+            <div>
+                <i aria-hidden="true" class="fa fa-ruler fa-lg size" title="size"></i>
+                <span class="fa-sr-only">size</span>
+                <span>${property.size} ft<sup>2</sup></span>
+            </div>
+            </div>
+        </div>
+        `;
+        return content;
+    },
+    buildContent:function( marker ) {
+        const content = document.createElement("div");
+    
+        content.classList.add("marker");
+        content.innerHTML = marker.html;
+        // content.innerHTML = `
+        // <div class="icon">
+        //     <i aria-hidden="true" class="fa fa-icon fa-${marker.type}" title="${marker.type}"></i>
+        //     <span class="fa-sr-only">${marker.type}</span>
+        // </div>
+        // <div class="details">
+        //     <div class="price">${marker.price}</div>
+        //     <div class="address">${marker.address}</div>
+        //     <div class="features">
+        //     <div>
+        //         <i aria-hidden="true" class="fa fa-bed fa-lg bed" title="bedroom"></i>
+        //         <span class="fa-sr-only">bedroom</span>
+        //         <span>${marker.bed}</span>
+        //     </div>
+        //     <div>
+        //         <i aria-hidden="true" class="fa fa-bath fa-lg bath" title="bathroom"></i>
+        //         <span class="fa-sr-only">bathroom</span>
+        //         <span>${marker.bath}</span>
+        //     </div>
+        //     <div>
+        //         <i aria-hidden="true" class="fa fa-ruler fa-lg size" title="size"></i>
+        //         <span class="fa-sr-only">size</span>
+        //         <span>${marker.size} ft<sup>2</sup></span>
+        //     </div>
+        //     </div>
+        // </div>
+        // `;
+        return content;
+    },
+    toggleHighlight:function( markerView, marker ) {
+        if ( markerView.content.classList.contains( "highlight" ) ) {
+            markerView.content.classList.remove( "highlight" );
+            markerView.zIndex = null;
+        } else {
+            markerView.content.classList.add( "highlight" );
+            markerView.zIndex = 1;
+        }
+    },
+    render:function( data ) {
+        console.log('in maps render function');
+        if ( typeof google === 'object' && typeof google.maps === 'object' ) {
+            // console.log('google maps already loaded');            
+        } else {
+            maps.init_google();
+        }
+        const maps_style = ( data.style ) ? data.style : `${core.plugin_path}css/maps_style.css`;      
+        const zoom = ( data.zoom ) ? data.zoom : 11;
+        console.log(zoom);
+        if ( data.scripts ) {
+            $.each( data.scripts, function( index, script ) {
+                $.getScript( script, function() {
+                    // console.log(`${script} library loaded in maps render.`);
+                });
+            });
+        }
+        const maps_div = ( data.div ) ? data.div : `<div style="height: 600px; width: 100%" id="${data.name}"></div>`;
+        $( function() {
+            $( '#maps' ).append( maps_div );
+            $( '#maps' ).after( `<style id="maps_style"></style>` );
+            $( "#maps_style" ).load( maps_style );
+            render();
+        });
+        let render = function() {
+            // console.log('render map',data);
+            /**
+            * @license
+            * Copyright 2019 Google LLC. All Rights Reserved.
+            * SPDX-License-Identifier: Apache-2.0
+            */
+            async function init_map() {
+                // Request needed libraries.
+                const { Map } = await google.maps.importLibrary( "maps" );
+                const { AdvancedMarkerElement } = await google.maps.importLibrary( "marker" );
+                const center = data.center;
+                const map = new Map( document.getElementById( data.name ), {
+                    zoom: zoom,
+                    center,
+                    mapId: "c76f6a9d031f9da0",
+                });
+                
+                let url = `${core.url}&action=get_map_markers`;
+                let markers = {query:"this is the markers query"};
+                let render_map_markers = function( response ) {
+                    console.log(response);
+                    if ( response != '') {
+                        let response_obj = JSON.parse( response );
+                        if ( response_obj.success ) {
+                            console.log(response_obj.data)
+                            let data = response_obj.data;
+                            for ( const marker of data ) {
+                                // console.log(marker.description)
+                                const AdvancedMarkerElement = new google.maps.marker.AdvancedMarkerElement({
+                                    map,
+                                    content: maps.buildContent( marker ),
+                                    position: marker.position,
+                                    title: marker.description,
+                                });
+                            
+                                AdvancedMarkerElement.addListener( "click", () => {
+                                    maps.toggleHighlight( AdvancedMarkerElement, marker );
+                                });
+                            }
+                        }
+                    }
+                }
+                core.ajax_post( url, markers, render_map_markers );
+            }              
+            init_map();           
+        }
     }
 }
 
