@@ -150,7 +150,7 @@ var core = core || {
             // core.ajax_get( url, callback );
             core.ajax_post( url, data, callback );
         } else {
-            let url = `http://localhost/plugin/index.php?module=antevasin/core/files&module_action=${action}&module_name=${module}&file_url=${file_url}&private=${private}`;
+            let url = `${core.files_url}&module_action=${action}&module_name=${module}&file_url=${file_url}&private=${private}`;
             console.log(element,action,module,core.files_url,file_url,url,private);
             open_dialog( url );
         }

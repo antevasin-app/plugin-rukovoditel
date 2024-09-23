@@ -91,7 +91,7 @@ function install( $module )
         $new_zip->close();        
         if ( $action == 'download' )
         {
-            $file_url = 'http://localhost/plugin/tmp/plugin/' . $zip_filename . '.zip';
+            $file_url = url_for_file( 'tmp/plugin/' . $zip_filename . '.zip' );
             die( '{"success":"downloading file", "download_url":"' . $file_url . '"}' ); 
         }
         else

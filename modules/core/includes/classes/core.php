@@ -142,7 +142,8 @@ class core implements module
         if ( get_class( $this ) == 'Antevasin\core' )
         {
             $source = $this->get_info()->source;
-            $file_url = 'https://api.github.com/repos/' . $this->get_info()->source . '/zipball/v' . $this->get_info()->version;
+            $version = ( $this->get_name() == 'core' ) ? PLUGIN_VERSION : $this->get_info()->version;
+            $file_url = 'https://api.github.com/repos/' . $this->get_info()->source . '/zipball/v' . $version;
             $private = ( isset( $this->get_info()->token ) ) ? 1 : 0;
             $reinstall_link = $this->get_reinstall_link();
             $is_link_dir = PLUGIN_PATH . 'application_core.php';
@@ -559,7 +560,8 @@ class core implements module
         // die(print_rr($this));
         $module_name = $this->get_name();
         $source = $this->get_info()->source;
-        $file_url = 'https://api.github.com/repos/' . $this->get_info()->source . '/zipball/v' . $this->get_info()->version;
+        $version = ( $this->get_name() == 'core' ) ? PLUGIN_VERSION : $this->get_info()->version;
+        $file_url = 'https://api.github.com/repos/' . $this->get_info()->source . '/zipball/v' . $version;
         $private = ( isset( $this->get_info()->token ) ) ? 1 : 0;
         $link = <<<LINK
             <a class="action" data-action="reinstall" data-module="$module_name" data-source="$source" data-file_url="$file_url" data-private="$private" onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>

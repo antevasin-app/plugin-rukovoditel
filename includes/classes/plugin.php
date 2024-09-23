@@ -107,7 +107,7 @@ class plugin
                 $is_module_user = true;
             }
         }
-        if ( \guest_login::is_guest() )
+        if ( \guest_login::is_guest() || IS_AJAX )
         {
             $is_module_user = true;
         }
