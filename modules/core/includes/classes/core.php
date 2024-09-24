@@ -583,14 +583,14 @@ class core implements module
                 let latest_version = response.tag_name.split( 'v' )
                 let update = ( installed_version.trim() == latest_version[1] ) ? false : true
                 let zip_url = response.zipball_url
-                let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" class="install-link action" onclick="core.files( this );">Install Version 1.0.1</a>'
+                let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
                 console.log(module,update,latest_version,zip_url,link)
                 if ( update ) ( module == 'core' ) ? $( '#alert_plugin_settings' ).html( link ) : $( `#latest_` + module ).show().html( link )
             }
             let source = $( element ).data( 'source' )    
             let url = `https://api.github.com/repos/` + source + `/releases/latest`
             // let url = `https://api.github.com/repos/antevasin-app/module-template/releases/latest`
-            // core.ajax_get( url, callback_test )
+            core.ajax_get( url, callback_test )
         })
         SCRIPT;
         return $script;
