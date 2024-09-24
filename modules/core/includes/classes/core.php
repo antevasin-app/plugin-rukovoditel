@@ -165,7 +165,7 @@ class core implements module
                     array(     
                         'label' => 'Installed Version',
                         'field_class' => 'plugin-info',
-                        'field' => PLUGIN_VERSION . '<a style="padding: 0 10px 0 10px;" data-action="download" data-module="core" data-source="' . $source . '" data-file_url="' . $file_url . '" data-private="' . $private . '" onclick="core.files( this )"><i class="fa fa-download"></i></a>' . $reinstall_link
+                        'field' => PLUGIN_VERSION . '<a id="plugin_version" style="padding: 0 10px 0 10px;" data-action="download" data-module="core" data-version="' . PLUGIN_VERSION . '" data-source="' . $source . '" data-file_url="' . $file_url . '" data-private="' . $private . '" onclick="core.files( this )"><i class="fa fa-download"></i></a>' . $reinstall_link
                     ),
                     array(     
                         'label' => 'Plugin Source',
@@ -479,7 +479,7 @@ class core implements module
         {
             // print_rr($module);
             $source = $module['info']['source'];
-            $version = $module['info']['version'];
+            $version = ( $module_name == 'core' ) ? PLUGIN_VERSION : $module['info']['version'];
             $file_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
             $token = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? $module['config']['token'] : '';
             $private = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? 1 : 0;
@@ -577,14 +577,14 @@ class core implements module
         let modules = $( `.module-info` )
         $.each( modules, function( index, element ) {
             let module = $( element ).data( 'module' )
+            let installed_version = $( element ).data( 'version' )
             let callback_test = function( response ) {
                 // console.log(response.zipball_url)
-                let installed_version = $( '.version' ).html()
                 let latest_version = response.tag_name.split( 'v' )
                 let update = ( installed_version.trim() == latest_version[1] ) ? false : true
                 let zip_url = response.zipball_url
                 let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
-                console.log(module,update,latest_version,zip_url,link)
+                // console.log(module,update,latest_version,zip_url,link)
                 if ( update ) ( module == 'core' ) ? $( '#alert_plugin_settings' ).html( link ) : $( `#latest_` + module ).show().html( link )
             }
             let source = $( element ).data( 'source' )    
