@@ -86,7 +86,7 @@ function install( $module )
                 $new_zip->addFile( $real_path, $parts[1] );
             }
         }       
-        $install_dir = ( $module_name == 'core' ) ? PLUGIN_PATH . $zip_filename : PLUGIN_PATH . 'modules/' . $zip_filename;
+        $install_dir = ( $module_name == 'core' ) ? PLUGIN_PATH : PLUGIN_PATH . 'modules/' . $zip_filename;
         // Zip archive is created only after closing object
         $new_zip->close();        
         if ( $action == 'download' )

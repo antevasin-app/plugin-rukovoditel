@@ -5,8 +5,8 @@ namespace Antevasin;
 ?>
 
 $.getScript( "<?php echo PLUGIN_PATH ?>js/jquery.serializeToJSON.js", function() {
-    console.log("jquery.serializeToJSON library loaded.");
- });
+    // console.log("jquery.serializeToJSON library loaded.");
+});
 var plugin = plugin || {
     form_element: null,
     form: {},
