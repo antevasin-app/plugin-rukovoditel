@@ -9,20 +9,20 @@ $action = $data['module_action'];
 $dest = PLUGIN_PATH . 'modules/' . $module_name . '/';
 $heading = ucwords( $action ) . ' Source Files';  
 $warning = 'All existing module files in the directory <b>' . $dest . '</b> will be overwritten';
-switch ( $action )
-{
-    case 'install':
-        $heading = 'Install ' . $title . ' ' .  ucwords( $type ) . ' Source Files';
-        break;
-    case 'upgrade':
-        $heading = 'Update ' . $title . ' ' .  ucwords( $type ) . ' Source Files to New Version';
-        // $warning = 'All existing module files in the directory <b>' . $dest . '</b> will be overwritten';
-        break;            
-    default:
-        break;
-}
-$file_update_url = 'file update url';
-$source = 'source';
+// switch ( $action )
+// {
+//     case 'install':
+//         $heading = 'Install ' . $title . ' ' .  ucwords( $type ) . ' Source Files';
+//         break;
+//     case 'upgrade':
+//         $heading = 'Update ' . $title . ' ' .  ucwords( $type ) . ' Source Files to New Version';
+//         // $warning = 'All existing module files in the directory <b>' . $dest . '</b> will be overwritten';
+//         break;            
+//     default:
+//         break;
+// }
+// $file_update_url = 'file update url';
+// $source = 'source';
 $type = 'module';
 echo ajax_modal_template_header( $heading );
 echo form_tag( 'install_confirmation_form', url_for( 'antevasin/core/files', 'action=' . $action ) );
