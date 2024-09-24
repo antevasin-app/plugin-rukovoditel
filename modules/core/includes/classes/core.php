@@ -147,7 +147,7 @@ class core implements module
             $private = ( isset( $this->get_info()->token ) ) ? 1 : 0;
             $reinstall_link = $this->get_reinstall_link();
             $is_link_dir = PLUGIN_PATH . 'application_core.php';
-            // print_rr($is_link_dir);
+            // print_rr("private is $private");
             if ( is_link( $is_link_dir ) )
             {
                 // $_SESSION['alerts']->messages[] = array('params' => 'class="alert alert-danger"',  'text' => "Download aborted as destination directory is a symbolic link" );
@@ -583,7 +583,7 @@ class core implements module
                 let latest_version = response.tag_name.split( 'v' )
                 let update = ( installed_version.trim() == latest_version[1] ) ? false : true
                 let zip_url = response.zipball_url
-                let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" class="install-link action" onclick="core.install( this );">Install Version 1.0.1</a>'
+                let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" class="install-link action" onclick="core.files( this );">Install Version 1.0.1</a>'
                 console.log(module,update,latest_version,zip_url,link)
                 if ( update ) ( module == 'core' ) ? $( '#alert_plugin_settings' ).html( link ) : $( `#latest_` + module ).show().html( link )
             }
