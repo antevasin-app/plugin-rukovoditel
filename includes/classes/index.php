@@ -24,11 +24,14 @@ class index
     {
         $form = new form( $this->module );
         $form->set_id ( 'cfg' );
-        $form->set_action ( url_for( 'configuration/save', "redirect_to=" . PLUGIN_NAME . "/{$this->module->get_name()}/index" ) );
+        $module_name = $this->module->get_name();
+        $form->set_action ( url_for( 'configuration/save', "redirect_to=" . PLUGIN_NAME . "/$module_name/index" ) );
         $form->set_title ( $this->title, $this->title_link );  
         $this->module->module_index_tabs( $form );
         $config = $this->module->get_config();
+        $private = ( isset( $this->module->get_info()->private ) && $this->module->get_info()->private ) ? true : false;
         $token = ( isset( $config->token ) ) ? $config->token : '';
+        $module_info = $this->module->get_info();
         $tabs = array( 
             array(
                 'name' => 'module',
@@ -51,33 +54,8 @@ class index
                             ),
                             array(
                                 'field_class' => 'plugin-info',
-                                'label' => 'Source File',
-                                'field' => $this->get_repository_link()
-                            ),
-                            array(
-                                'field_class' => 'plugin-info',
-                                'label' => 'Token',
-                                'field' => $form->add_tag( 'input', 'module[token]', null, $token, array( 'size' => 'x-large' ) )
-                            ),
-                            array(
-                                'field_class' => 'plugin-info',
-                                'label' => 'Token Expiry',
-                                'field' => $form->add_tag( 'input', 'module[token_expiry]', null, $config->token_expiry, array( 'size' => 'medium' ) )
-                            ),
-                            array(
-                                'field_class' => 'plugin-info',
                                 'label' => 'Module Description',
                                 'field' => $this->module->get_info()->description
-                            ),
-                            array(
-                                'label' => 'Module Notes',
-                                'field' => $form->add_tag( 'textarea', 'module[notes]', null, $config->notes, array( 'size' => 'large' ) )
-                            ),
-                            array( 
-                                'field' => $form->add_tag( 'input_hidden', 'CFG[MODULE_' . strtoupper( $this->module->get_name() ) . '_CONFIG]', null, '', array( 'size' => 'large' ) )
-                            ),
-                            array( 
-                                'field' => $form->add_tag( 'input_hidden', 'current_config', null, json_encode( $config ), array( 'size' => 'large' ) )
                             ),
                         )
                     ),
@@ -112,6 +90,53 @@ class index
                 )
             )
         );
+        if ( $module_name == 'core' )
+        {
+            $tabs[0]['sections'][] = array(
+                'title' => 'Module Management',
+                'content' => $this->module->module_management()
+            );
+        }
+        if ( isset( $this->module->get_info()->source ) )
+        {
+            $tabs[0]['sections'][0]['groups'][] = array(
+                'field_class' => 'plugin-info',
+                'label' => 'Source File',
+                'field' => $this->get_repository_link()
+            );
+            $tabs[0]['sections'][0]['groups'][] = array( 
+                'label' => 'Branch',
+                'field_class' => 'plugin-info',
+                'field' => $form->add_tag( 'select', 'module_branches', array( $module_info->branch => $module_info->branch ), $module_info->branch, array( 'size' => 'small' ) )
+            );
+        } 
+        if ( $private )
+        {
+            $tabs[0]['sections'][0]['groups'][] = array(
+                'field_class' => 'plugin-info',
+                'label' => 'Token',
+                'field' => $form->add_tag( 'input', 'module[token]', null, $token, array( 'size' => 'x-large' ) )
+            );
+            $tabs[0]['sections'][0]['groups'][] = array(
+                'field_class' => 'plugin-info',
+                'label' => 'Token Expiry',
+                'field' => $form->add_tag( 'input', 'module[token_expiry]', null, $config->token_expiry, array( 'size' => 'medium' ) )
+            );          
+        }
+        $notes = ( isset( $config->notes ) ) ? $config->notes : '';
+        $tabs[0]['sections'][0]['groups'][] = array(
+            'label' => 'Module Notes',
+            'field' => $form->add_tag( 'textarea', 'module[notes]', null, $notes, array( 'size' => 'large' ) )
+        );
+        $tabs[0]['sections'][0]['groups'][] = array( 
+            'field' => $form->add_tag( 'input_hidden', 'CFG[MODULE_' . strtoupper( $module_name ) . '_CONFIG]', null, '' )
+        );
+        $tabs[0]['sections'][0]['groups'][] = array( 
+            'field' => $form->add_tag( 'input_hidden', 'current_config', null, json_encode( $config ) )
+        );
+        $tabs[0]['sections'][0]['groups'][] = array( 
+            'field' => $form->add_tag( 'input_hidden', 'module_name', null, $module_name )
+        );
         if ( !empty( $this->module->get_index_tabs() ) ) $tabs = array_merge( $this->module->get_index_tabs(), $tabs );
         $form->add_tabs( $tabs );
         $style = <<<STYLE
@@ -133,128 +158,19 @@ class index
 
     private function get_source_link()
     {
+        $module_name = $this->module->get_name();
+        $version = ( $module_name == 'core' ) ? PLUGIN_VERSION : $this->module->get_info()->version;
+        if ( !isset( $this->module->get_info()->source ) ) return $version;
         $source = $this->module->get_info()->source;
-        return $this->module->get_info()->version . '<a style="padding: 0 10px 0 10px;" href="https://api.github.com/repos/' . $source . '/zipball/v' . $this->module->get_info()->version . '"><i class="fa fa-download"></i></a>' . $this->module->get_reinstall_link( $this->module->get_name() );
+        $file_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
+        $private = ( isset( $this->module->get_config()->token ) ) && !empty( isset( $this->module->get_config()->token ) ) ? 1 : 0;
+        $token = ( $private ) ? 'data-source_token="' . $this->module->get_config()->token . '"' : '';
+        return $this->module->get_info()->version . '<a style="padding: 0 10px 0 10px;" data-action="download" data-module="' . $module_name . '" data-version="' . PLUGIN_VERSION . '" data-source="' . $source . '" data-file_url="' . $file_url . '" data-private="' . $private . '"'. $token . ' onclick="core.files( this )"><i class="fa fa-download"></i></a>' . $this->module->get_reinstall_link( $module_name );
     }
 
     private function get_repository_link()
     {
         $source = $this->module->get_info()->source;
-        return '<div id="repoistory"><a href="https://github.com/' . $source . '" target="_blank">' . $source . '</a></div>';
-    }
-
-    public function render_()
-    {
-        echo '<h3>' . $this->module->get_title() . '</h3>';
-        $form = new form( $this->module );
-        $form->set_id ( 'cfg' );
-        $module_name = $this->module->get_name();
-        $cfg_name = "CFG[MODULE_" . strtoupper( $module_name ) . "_CONFIG]";
-        $form->add_hidden_inputs( array( 'module_name' => $module_name, $cfg_name => '' ) );
-        $form->set_action( url_for( 'configuration/save', 'redirect_to=antevasin/readme/index' ) );
-        // $form->set_params( array( 'id' => 'config_form', 'class' => 'test' ) );
-        $form->set_submit_btn_options( array( 'id' => 'submit_config', 'btn_text' => 'Save Config' ) );
-        $form->set_tabbable( true );
-
-        /*
-        add tabs
-        add tab content
-            add sections
-                add group / field
-
-        */
-        $form->add_tabs( array_merge(  $this->module->get_index_tabs(), array( 'module', 'access', 'menus' ) ) );
-        $form->render();
-
-        $form->add_tag( 'input', 'Tag Label', 'module[test]', null, 'input value' );
-        $form->add_tabs_content( 
-            array(
-                array(
-                    'tab' => array(
-                        'name' => 'module', 
-                        'format' => 'ucfirst'
-                    ),
-                    'class' => 'module-info-index',
-                    'title' => 'Module Info', 
-                    'groups' => array( 
-                        'Path' => $this->module->get_path(),
-                        'Version' => $this->module->get_info()->version,
-                        'Description' => $this->module->get_info()->description,
-                        'Release Date' => $this->module->format_date( $this->module->get_info()->date ),
-                        'Source' => $this->module->get_info()->source,
-                        'Notes' => textarea_tag( 'module[notes]', $this->module->get_config()->notes, array('class'=>'form-control input-xlarge' ) ),
-                    ) 
-                ),
-                array(
-                    'tab' => array(
-                        'name' => 'access',
-                        'format' => 'ucfirst'
-                    ),
-                    'sections' => array(
-                        array(
-                            'title' => 'Administration Access', 
-                            'groups' => array( $this->module->user_access_tags() )
-                        ),
-                        array(
-                            'title' => 'System Admin Access', 
-                            'groups' => array( $this->module->user_access_tags() )
-                        ),
-                        array(
-                            'title' => 'User Access', 
-                            'groups' => array( $this->module->user_access_tags() )
-                        ),
-                    )
-                ),
-                array(
-                    'tab' => array(
-                        'name' => 'menus',
-                        'format' => 'ucfirst'
-                    ),
-                    'sections' => array(
-                        array(
-                            'title' => 'Icons', 
-                            'groups' => array( 
-                                'Use same icon for all menus' => select_tag( 'module[menus][all_menus]', $form->get_default_selector(), $this->module->get_config()->menus->all_menus, array( 'class' => 'form-control input-small' ) ),
-                                'Icon' => input_tag( 'module[menus][icon]', $this->module->get_config()->menus->icon, array( 'class' => 'form-control input-medium required' ) )
-                            )
-                        ),
-                        array(
-                            'title' => 'Sidebar Menu', 
-                            'groups' => array( 
-                                'Show Menu' => select_tag( 'module[menus][sidebar][show]', $form->get_default_selector(), $this->module->get_config()->menus->sidebar->show, array( 'class' => 'form-control input-small' ) ),
-                                'Icon' => input_tag( 'module[menus][sidebar][icon]', $this->module->get_config()->menus->sidebar->icon, array( 'class' => 'form-control input-medium required' ) ),
-                                'Menu Link Text' => input_tag( 'module[menus][sidebar][link_text]', $this->module->get_config()->menus->sidebar->link_text, array( 'class' => 'form-control input-large required' ) ),
-                                'Menu Link URL' => input_tag( 'module[menus][sidebar][link_url]', $this->module->get_config()->menus->sidebar->link_url, array( 'class' => 'form-control input-large required' ) ),
-                            )
-                        ),
-                        array(
-                            'title' => 'User Menu', 
-                            'groups' => array( 
-                                'Show Menu' => select_tag( 'module[menus][user][show]', $form->get_default_selector(), $this->module->get_config()->menus->user->show, array( 'class' => 'form-control input-small' ) ),
-                                'Icon' => input_tag( 'module[menus][user][icon]', $this->module->get_config()->menus->user->icon, array( 'class' => 'form-control input-medium required' ) ),
-                                'Menu Link Text' => input_tag( 'module[menus][user][link_text]', $this->module->get_config()->menus->user->link_text, array( 'class' => 'form-control input-large required' ) ),
-                                'Menu Link URL' => input_tag( 'module[menus][user][link_url]', $this->module->get_config()->menus->user->link_url, array( 'class' => 'form-control input-large required' ) ),
-                            )
-                        ),
-                    )
-                )
-            )
-        );
-        $onload = <<<SCRIPT
-        core.setup_module_index();
-        SCRIPT;
-        $script_2 = <<<SCRIPT
-        // console.log('script 2 test - onload');
-        // console.log('script 2 another test - onload');
-        SCRIPT;
-        $script_3 = <<<SCRIPT
-        // console.log('script 3 test - form add scripts');
-        // console.log('script 3 another test - form add scripts');
-        SCRIPT;
-        $script_4 = array( 'form' => "console.log('script 4 form array')", 'onload' => "console.log('script 4 onload array')" );
-        // $form->add_js( $onload );
-        // $form->add_js( $script_2, false );
-        // $form->add_scripts( array( $script_2, $script_3, $script_4 ) );
-        // echo $form->render();
+        return '<div id="repository"><a id="source" href="https://github.com/' . $source . '" target="_blank">' . $source . '</a></div>';
     }
 }

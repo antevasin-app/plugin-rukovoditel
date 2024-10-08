@@ -9,6 +9,7 @@ class plugin
     private $plugin_info;
     private $core_path;
     private $modules;
+    private $public_module_access = false;
     
     function __construct()
     {        
@@ -42,10 +43,12 @@ class plugin
         $this->core_path = $this->plugin_path . 'modules/core/';
     }
 
-    protected function get_core_path()
+
+
+    public function set_public_module_access()
     {
-        return $this->core_path;
-    }
+        $this->public_module_access = true;
+    }  
 
     private function set_modules()
     {
@@ -92,6 +95,10 @@ class plugin
         global $app_user;
 
         $is_system_admin = $is_plugin_admin = $is_module_user = false;
+        if ( $this->public_module_access )
+        {
+            $is_module_user = true;
+        }
         if ( isset( $app_user ) )
         {
             if ( $app_user['group_id'] === 0 )
@@ -120,6 +127,11 @@ class plugin
 
     // getter functions
 
+    protected function get_core_path()
+    {
+        return $this->core_path;
+    }
+    
     public function get_modules( $exclude_core = true )
     {
         $modules = $this->modules;
@@ -185,5 +197,13 @@ class plugin
                 require_once $module_file;
             }   
         }  
+    }
+    
+    public function check_token()
+    {
+        if ( isset( $_GET['token'] ) )
+        {
+            return true;
+        }
     }
 }

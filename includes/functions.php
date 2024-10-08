@@ -2,9 +2,10 @@
 
 namespace Antevasin;
 
-function get_plugin_modules( $path )
+// print_rr('plugin functions');
+function get_plugin_modules()
 {
-    $dirs = glob( $path . 'modules/*', GLOB_ONLYDIR );
+    $dirs = glob( PLUGIN_PATH . 'modules/*', GLOB_ONLYDIR );
     $modules = array();
     foreach ( $dirs as $dir )
     {

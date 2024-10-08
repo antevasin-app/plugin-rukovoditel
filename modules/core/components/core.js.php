@@ -104,6 +104,7 @@ var core = core || {
             method: "POST",
             url: url,
             data: data,
+            headers: core.ajax_headers
         })
         .done( done )
         .fail( function( jqXHR, textStatus, errorThrown ) {
@@ -143,6 +144,9 @@ var core = core || {
                     let response_obj = JSON.parse( response );
                     if ( response_obj.success && response_obj.download_url ) {
                         window.location = response_obj.download_url;
+                    } else if ( response_obj.error ) {
+                        let data = response_obj.data;
+                        alert(JSON.stringify( data, null, 2 ));
                     }
                 }   
             }
@@ -162,20 +166,6 @@ var core = core || {
 }
 
 var maps = maps || {
-    addresses_map: function() {
-        console.log('in maps addresses_map function') 
-        const data = {
-            name: "addresses_map",
-            div: `<div style="height: 1200px; width: 100%" id="addresses_map"></div>`,
-            center: { lat: 37.43238031167444, lng: -122.16795397128632 },
-            zoom: 11,
-            style: `${core.plugin_path}css/addresses_map.css`,
-            scripts: [
-                "https://use.fontawesome.com/releases/v6.2.0/js/all.js"
-            ],
-        }
-        maps.render( data );
-    },
     init_google:function() {
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})
         ({key: "AIzaSyCJue_fSK533hqpKHe5LSSkgizsG9mzyXU", v: "beta"});
@@ -291,7 +281,7 @@ var maps = maps || {
         }
     },
     render:function( data ) {
-        console.log('in maps render function');
+        // console.log('in maps render function');
         if ( typeof google === 'object' && typeof google.maps === 'object' ) {
             // console.log('google maps already loaded');            
         } else {
@@ -330,37 +320,52 @@ var maps = maps || {
                     zoom: zoom,
                     center,
                     mapId: "c76f6a9d031f9da0",
-                });
-                
-                let url = `${core.url}&action=get_map_markers`;
-                let markers = {query:"this is the markers query"};
+                    mapTypeControl: true,
+                });                
                 let render_map_markers = function( response ) {
-                    console.log(response);
+                    // console.log(response);
                     if ( response != '') {
                         let response_obj = JSON.parse( response );
                         if ( response_obj.success ) {
-                            console.log(response_obj.data)
+                            // console.log(response_obj.data)
                             let data = response_obj.data;
-                            for ( const marker of data ) {
-                                // console.log(marker.description)
+                            $.each( data, function( index, marker ) {
+                                let position = {lat: parseFloat( marker.position.lat ),lng: parseFloat( marker.position.lng )}
+                                // console.log(position)
                                 const AdvancedMarkerElement = new google.maps.marker.AdvancedMarkerElement({
                                     map,
                                     content: maps.buildContent( marker ),
-                                    position: marker.position,
+                                    position: position,
                                     title: marker.description,
                                 });
                             
                                 AdvancedMarkerElement.addListener( "click", () => {
                                     maps.toggleHighlight( AdvancedMarkerElement, marker );
                                 });
-                            }
+                            });
                         }
                     }
                 }
-                core.ajax_post( url, markers, render_map_markers );
+                core.ajax_post( data.url, data.markers, render_map_markers );
             }              
             init_map();           
         }
+    },
+    get_location:function( callback ) {
+        if ( navigator.geolocation ) {
+            navigator.geolocation.getCurrentPosition( callback );
+        } else {
+            console.log("Geolocation is not supported by this browser.");
+            return {error: "Geolocation is not supported by this browser."};
+        }
+    },
+    get_google_direction_url:function( data ) {
+        // see https://developers.google.com/maps/documentation/urls/get-started#directions-action
+        let origin = `${data.origin.lat},${data.origin.lng}`;
+        let destination = `${data.destination.lat},${data.destination.lng}`;
+        let mode = ( data.mode ) ? `&travelmode=${data.travel_mode}` : '';
+        let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${mode}`;
+        return url;
     }
 }
 

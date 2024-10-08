@@ -143,6 +143,7 @@ class core implements module
         {
             $source = $this->get_info()->source;
             $version = ( $this->get_name() == 'core' ) ? PLUGIN_VERSION : $this->get_info()->version;
+            $branch = $this->get_info()->branch;
             $file_url = 'https://api.github.com/repos/' . $this->get_info()->source . '/zipball/v' . $version;
             $private = ( isset( $this->get_info()->token ) ) ? 1 : 0;
             $reinstall_link = $this->get_reinstall_link();
@@ -157,6 +158,12 @@ class core implements module
             $plugin_settings = array(
                 'title' => 'Plugin Settings',
                 'groups' => array(
+                    array( 
+                        'label' => 'Branch',
+                        'field_class' => 'plugin-info',
+                        'field' => $form->add_tag( 'select', 'plugin_branches', array( $branch => $branch ), $branch, array( 'size' =>
+                         'small' ) )
+                    ),
                     array(     
                         'label' => 'Plugin Path',
                         'field_class' => 'plugin-info',
@@ -189,12 +196,12 @@ class core implements module
                     'content' => $this->module_management()
                 ),                    
             );
-            array_unshift( $sections, $plugin_settings );
+            // array_unshift( $sections, $plugin_settings );
             $tabs =  array(
                 'name' => 'plugin',
                 'sections' => $sections
             );
-            $this->set_index_tabs( array( $tabs ) ); 
+            // $this->set_index_tabs( array( $tabs ) ); 
         }
     }
 
@@ -474,37 +481,44 @@ class core implements module
     public function module_management()
     {
         $modules = get_plugin_modules( PLUGIN_PATH );
+        unset( $modules['core'] );
         $installed_modules = '';
         foreach ( $modules as $module_name => $module )
         {
             // print_rr($module);
-            $source = $module['info']['source'];
+            $download = $reinstall = $install_info = '';
             $version = ( $module_name == 'core' ) ? PLUGIN_VERSION : $module['info']['version'];
-            $file_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
-            $token = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? $module['config']['token'] : '';
-            $private = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? 1 : 0;
-            $data_attributes = <<<DATA
-                data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private="$private" data-source_token="$token"
-            DATA;
-            $module_info = <<<INFO
-                <div class="module-info" id="module_{$module['name']}" data-action="install" data-path="{$module['path']}" data-version="{$version}" data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private=$private  onclick="core.files( this )">Install Version Test</div>
-            INFO;
-            $download_link = <<<DOWNLOAD
-                <a style="padding: 0 10px 0 10px;" data-action="download" $data_attributes onclick="core.files( this )"><i class="fa fa-download"></i></a>
-            DOWNLOAD;
-            $download = ( $module['name'] == 'core' ) ? '' : $download_link;
-            $reinstall_link = <<<REINSTALL
-                <a class="action" data-action="reinstall" $data_attributes onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
-            REINSTALL;
+            if ( isset( $module['info']['source'] ) )
+            {
+                $source = $module['info']['source'];
+                $file_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
+                $token = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? $module['config']['token'] : '';
+                $private = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? 1 : 0;
+                $data_attributes = <<<DATA
+                    data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private="$private" data-source_token="$token"
+                DATA;
+                $install_info = <<<INFO
+                    <div class="install-info" id="module_{$module['name']}" data-module="$module_name" data-action="install" data-path="{$module['path']}" data-version="{$version}" data-source="$source" data-file_url="$file_url" data-private="$private" data-token="$token" onclick="core.files( this )"></div>
+                INFO;
+                $download = <<<DOWNLOAD
+                    <a style="padding: 0 10px 0 10px;" data-action="download" $data_attributes onclick="core.files( this )"><i class="fa fa-download"></i></a>
+                DOWNLOAD;
+                // $download = ( $module['name'] == 'core' ) ? '' : $download_link;
+                $reinstall = <<<REINSTALL
+                    <a class="action" data-action="reinstall" $data_attributes onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
+                REINSTALL;
+
+            }
             // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
-            $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
+            // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
             // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
+            $module_index = url_for( $module['app_path'] . 'index' );
             $installed_modules .= '
                 <li>
                     <div>
-                        <span class="module-name">' . $module['info']['title'] . '</span><span class="module-version">v' . $version . '</span>' . $download . $reinstall . '
+                        <span class="module-name"><a href="' . $module_index . '">' . $module['info']['title'] . '</a></span><span class="module-version">v' . $version . '</span>' . $download . $reinstall . '
                         <div class="module-description">' . $module['info']['description'] . '</div>
-                        ' . $module_info . '
+                        ' . $install_info . '
                     </div>
                 </li>
             ';
@@ -532,6 +546,9 @@ class core implements module
             }
             .install-link {
                 color: red;
+            }
+            .install-info {
+                display: none;
             }
         </style>
         <script type="module">
@@ -566,7 +583,8 @@ class core implements module
         $link = <<<LINK
             <a class="action" data-action="reinstall" data-module="$module_name" data-source="$source" data-file_url="$file_url" data-private="$private" onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
         LINK;
-        // return '<a class="action" data-action="reinstall" data-module="' . $module_name . '" data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private="$private" onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>'; 
+        $is_link_dir = PLUGIN_PATH . 'modules/' . $module_name;
+        if ( is_link( $is_link_dir ) ) $link = '';
         return $link;
     }
 
@@ -574,28 +592,90 @@ class core implements module
     {        
         $modules = ( $this->get_name() == 'core' ) ? 'let modules = $( `.module-info` )' : 'let modules = $( `#module_test` )';
         $script = <<<SCRIPT
+        const repos_url = `https://api.github.com/repos/`
         let modules = $( `.module-info` )
-        $.each( modules, function( index, element ) {
-            let module = $( element ).data( 'module' )
+        let branch_select = $( '#module_branches' )
+        let branches = {}
+        let source = $( '#source' ).html()
+        let module_token = $( '#module_token' ).val()
+        branch_select.each( function() {
+            // console.log($( 'option', this))
+            let option = $( 'option', this )
+            let branch = option.val()
+            branches[branch] = option
+        })
+        let url = repos_url + source + "/branches"
+        let branch_options = $( '#plugin_branch option' )
+        // console.log(branch_options)
+        let get_branches = function( response ) {
+            console.log(branches) 
+            $.each( response, function( index, branch ) {
+                let name = branch.name
+                let sha = branch.commit.sha
+                let url = branch.commit.url
+                if ( branches[name] !== undefined ) {
+                    console.log('branch exists',name)
+                    $( branches[name] ).attr( 'sha', sha )
+                    $( branches[name] ).attr( 'url', url )
+                } else {
+                    branch_select.append( '<option value="' + name + '" sha-"' + sha + '" url="' + url +'">' + name + '</option>' )
+                }
+            })    
+        }
+        if ( module_token !== undefined ) {
+            console.log('in module token',module_token)
+            core.ajax_headers = {'Authorization': 'token ' + module_token}
+        }
+        core.ajax_get( url, get_branches )
+        let install_versions = $( '.install-info' )
+        $.each( install_versions, function( index, element ) {
+            // console.log(element)
+            let container = $( element )
+            let module = container.data( 'module' )
             let installed_version = $( element ).data( 'version' )
-            let callback_test = function( response ) {
+            let get_latest_version = function( response ) {
                 // console.log(response.zipball_url)
                 let latest_version = response.tag_name.split( 'v' )
                 let update = ( installed_version.trim() == latest_version[1] ) ? false : true
                 let zip_url = response.zipball_url
                 let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
-                // console.log(module,update,latest_version,zip_url,link)
-                if ( update ) ( module == 'core' ) ? $( '#alert_plugin_settings' ).html( link ) : $( `#latest_` + module ).show().html( link )
+                console.log(module,update,latest_version,zip_url,link,container)
+                if ( update ) container.show().html( link )
             }
             let source = $( element ).data( 'source' )    
             let url = `https://api.github.com/repos/` + source + `/releases/latest`
-            // let url = `https://api.github.com/repos/antevasin-app/module-template/releases/latest`
-            core.ajax_get( url, callback_test )
+            let private = container.data( 'private' )
+            let module_token = container.data( 'token' )
+            if ( private && module_token !== undefined ) {
+                console.log('in module token',module_token)
+                core.ajax_headers = {'Authorization': 'token ' + module_token}
+            }
+            // console.log(module,installed_version,source,url)
+            core.ajax_get( url, get_latest_version )
         })
         SCRIPT;
         return $script;
     }
-
+    /*
+    console.log(modules)
+    $.each( modules, function( index, element ) {
+        let module = $( element ).data( 'module' )
+        let installed_version = $( element ).data( 'version' )
+        let get_latest_version = function( response ) {
+            // console.log(response.zipball_url)
+            let latest_version = response.tag_name.split( 'v' )
+            let update = ( installed_version.trim() == latest_version[1] ) ? false : true
+            let zip_url = response.zipball_url
+            let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
+            // console.log(module,update,latest_version,zip_url,link)
+            if ( update ) ( module == 'core' ) ? $( '#alert_plugin_settings' ).html( link ) : $( `#latest_` + module ).show().html( link )
+        }
+        let source = $( element ).data( 'source' )    
+        let url = `https://api.github.com/repos/` + source + `/releases/latest`
+        // let url = `https://api.github.com/repos/antevasin-app/module-template/releases/latest`
+        core.ajax_get( url, get_latest_version )
+    })
+    */
     public function get_date_string( $date )
     {
         date_default_timezone_set( CFG_APP_TIMEZONE );
@@ -607,6 +687,127 @@ class core implements module
     {
         if ( is_numeric( $date ) ) $date = $this->get_date_string( $date );
         return ( new \DateTime( $date, new \DateTimeZone( CFG_APP_TIMEZONE ) ) )->format( $format );
+    }
+
+    public function get_date_from_timestamp( $timestamp )
+    {
+        $date_obj = new \DateTime( date( CFG_APP_DATETIME_FORMAT, $timestamp ) );
+        $date = array(
+            'obj' => $date_obj,
+            'timestamp' => $timestamp,
+            'date' => $date_obj->format( CFG_APP_DATETIME_FORMAT ),
+        );
+        return $date;  
+    }
+
+    public function get_entity_field_values( $path, $field_id, $db_value = '' )
+    {
+        if ( empty( $db_value ) )
+        {
+            // get value from database
+            $db_value = 69;
+        }
+        $items_info = $this->get_items_info( $path );
+        $field_config = $this->get_entity_field_config( $items_info['entities_id'], $field_id );
+        $field_entity = $field_config['entity_id'];
+        // print_rr($field_config);
+        $heading_field_id = \fields::get_heading_id( $field_entity );
+        $sql = "SELECT * FROM app_entity_{$field_entity} WHERE id IN ( $db_value )";
+        // print_rr($sql);
+        $query = db_query( $sql );
+        $values = array();
+        while ( $results = db_fetch_array( $query ) )
+        {
+            $values[$results['id']] = $results["field_$heading_field_id"];
+        }
+        // print_rr($values);
+        return implode( ', ', $values );
+    }
+
+    public function get_entity_field_config( $entities_id, $field_id )
+    {
+        global $app_fields_cache;
+
+        $field_info = $this->get_entity_field_info( $entities_id, $field_id );
+        $field_config = json_decode( $field_info['configuration'], true );
+        return $field_config;
+    }
+
+    public function get_entity_field_info( $entities_id, $field_id )
+    {
+        global $app_fields_cache;
+
+        $field_info = $app_fields_cache[$entities_id][$field_id];
+        return $field_info;
+    }
+
+    public function get_entities_info( $path )
+    {
+        $entities_info = array();
+        $item_paths = explode( '/', $this->get_full_path( $path ) );
+        foreach ( $item_paths as $index => $entity_path )
+        {
+            $path_info = explode( '-', $entity_path );
+            if ( isset( $path_info[0] ) ) {
+                $entity_id = $path_info[0];
+                $entities_info[$entity_id] = array( 
+                    'entity_id' => $entity_id,
+                );
+                $entities_info[$entity_id]['items_id'] = ( isset( $path_info[1] ) ) ? $path_info[1] : '';   
+            }            
+        }
+        return $entities_info;
+    }
+
+    public function get_items_info( $path, $level = 0 )
+    {
+        if ( !empty( $path ) && strpos( $path, '-' ) )
+        {
+            $path_array = explode( '/', $this->get_full_path( $path ) );
+            $item_info = explode( '-', $path_array[count( $path_array ) - ($level + 1)] );
+            $entity_id = $item_info[0]; 
+            $items_id =  ( isset( $item_info[1] ) ) ? $item_info[1] : ''; 
+        }
+        else 
+        {
+            $entity_id = $path; 
+            $items_id = '';
+        }
+        return array( 'entities_id' => $entity_id, 'items_id' => $items_id );    
+    }
+
+    public  function get_full_path( $path )
+    {
+        if ( strpos( $path, '-' ) )
+        {
+            $entity_paths = explode( '/', $path );            
+            if ( count( $entity_paths ) > 1 )  
+            {
+                // check that path is valid
+                if ( !$this->check_full_path( $path ) ) $path = 'error';
+                return $path;
+            }  
+            else
+            {
+                $short_path_info = explode( '-', $path );
+                $entity_id = $short_path_info[0];
+                $items_id = $short_path_info[1];
+                $path_info = \items::get_path_info( $entity_id, $items_id );                   
+                $full_path = ( empty( $items_id ) ) ? str_replace( '-', '', $path_info['full_path'] ) : $path_info['full_path'];
+                return $full_path;
+            }
+        }
+        else
+        {
+            return $path;  
+        }
+    }
+
+    public function check_full_path( $path )
+    {
+        // TODO if required
+        $is_valid = true;        
+        return $is_valid;
     }
 
     public function is_html( $text )
@@ -736,7 +937,14 @@ class core implements module
     {
         // print_rr('in get_map_markers function');
         // print_rr($this->data);
-        $sql = "SELECT * FROM app_entities WHERE name='map_markers'";
+        $sql = "SELECT * FROM app_entities WHERE field_1287 IS NOT NULL";
+        $user_query = db_query( $sql );
+        $customers = array();
+        while ( $results = db_fetch_array( $user_query ) )
+        {
+            $customers[] = $results;
+        }
+        print_rr($customers);
         $data = array(
             array(
                 'address' => "215 Emily St, MountainView, CA",

@@ -4,7 +4,19 @@ namespace Antevasin;
 
 if ( !empty( $app_module_action ) )
 {
-    install( $core );
+    $data = $core->get_data();
+    $action = $data['action'];
+    $module_name = $data['module_name'];
+    if ( $module_name == 'core' )
+    {
+        $module = $core;
+    }
+    else
+    {
+        $module_name = "\\Antevasin\\$module_name";
+        $module = new $module_name();
+    }
+    install( $module );
 } 
 
 function install( $module )
@@ -13,12 +25,11 @@ function install( $module )
     $action = $data['action'];
     $module_name = $data['module_name'];
     // print_rr("installing source files for module $module_name - action is $action");
-    // print_rr($data);
     $file_url = $data['file_url'];
     $private = $data['private'];
     $temp_dir = 'tmp' . DIRECTORY_SEPARATOR . 'plugin' . DIRECTORY_SEPARATOR;
     if ( file_exists( $temp_dir ) ) remove_dir( $temp_dir );
-    mkdir( $temp_dir, 0711 );
+    mkdir( $temp_dir, 0775 );
     $zip_filename = ( ( $module_name == 'core' ) ? PLUGIN_NAME : $module_name );
     $local_zip_file = $temp_dir . $zip_filename . '_' . time() . '.zip';
     $local_zip_resource = fopen( $local_zip_file, "w+" );
@@ -28,7 +39,7 @@ function install( $module )
     if ( $private )
     {
         // print_rr('need to add key to header for curl request');
-        $token = $data['source_token'];
+        $token = $module->get_config()->token;
         $headers = array(
             'Authorization: token ' . $token
         );
@@ -51,7 +62,9 @@ function install( $module )
     $result = curl_exec($ch);
     if( !$result ) {
         // handle errors
-        die("Curl Error :- " . curl_error( $ch ));
+        $curl_error = explode( ':', curl_error( $ch ) );
+        die( '{"error":"CURL error getting file from server", "data":{"download_url":"' . $file_url . '","curl_errno":"' . curl_errno( $ch ) . '", "http":"' . trim( $curl_error[1] ) . '", "error_msg":"' . $curl_error[0] . '"}}' ); 
+        // die("Curl Error :- " . curl_error( $ch ));
     }   
     $zip = new \ZipArchive;
     $res = $zip->open( $local_zip_file, \ZipArchive::CREATE );
