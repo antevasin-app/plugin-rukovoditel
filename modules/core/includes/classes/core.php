@@ -498,7 +498,7 @@ class core implements module
                     data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private="$private" data-source_token="$token"
                 DATA;
                 $install_info = <<<INFO
-                    <div class="install-info" id="module_{$module['name']}" data-module="$module_name" data-action="install" data-path="{$module['path']}" data-version="{$version}" data-source="$source" data-file_url="$file_url" data-private="$private" data-token="$token" onclick="core.files( this )"></div>
+                    <a class="install-info" data-action="install" data-module="$module_name" data-path="{$module['path']}" data-source="$source" data-private="$private" data-token="$token" onclick="core.files( this )"></a>
                 INFO;
                 $download = <<<DOWNLOAD
                     <a style="padding: 0 10px 0 10px;" data-action="download" $data_attributes onclick="core.files( this )"><i class="fa fa-download"></i></a>
@@ -512,11 +512,11 @@ class core implements module
             // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
             // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
             // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
-            $module_index = url_for( $module['app_path'] . 'index' );
+            $module_index_url = url_for( $module['app_path'] . 'index' );
             $installed_modules .= '
                 <li>
                     <div>
-                        <span class="module-name"><a href="' . $module_index . '">' . $module['info']['title'] . '</a></span><span class="module-version">v' . $version . '</span>' . $download . $reinstall . '
+                        <span class="module-name" id="module_' . $module_name . '" data-installed_version="' . $version . '"><a href="' . $module_index_url . '">' . $module['info']['title'] . '</a></span><span class="module-version">v' . $version . '</span>' . $download . $reinstall . '
                         <div class="module-description">' . $module['info']['description'] . '</div>
                         ' . $install_info . '
                     </div>
@@ -544,11 +544,10 @@ class core implements module
             .module-latest {
                 /* display: none; */
             }
-            .install-link {
-                color: red;
-            }
             .install-info {
+                color: red;
                 display: none;
+                cursor: pointer;
             }
         </style>
         <script type="module">
@@ -608,13 +607,13 @@ class core implements module
         let branch_options = $( '#plugin_branch option' )
         // console.log(branch_options)
         let get_branches = function( response ) {
-            console.log(branches) 
+            // console.log(branches) 
             $.each( response, function( index, branch ) {
                 let name = branch.name
                 let sha = branch.commit.sha
                 let url = branch.commit.url
                 if ( branches[name] !== undefined ) {
-                    console.log('branch exists',name)
+                    // console.log('branch exists',name)
                     $( branches[name] ).attr( 'sha', sha )
                     $( branches[name] ).attr( 'url', url )
                 } else {
@@ -632,22 +631,27 @@ class core implements module
             // console.log(element)
             let container = $( element )
             let module = container.data( 'module' )
-            let installed_version = $( element ).data( 'version' )
+            let installed_version = $( '#module_' + module ).data( 'installed_version' )
+            // console.log(module,installed_version)
             let get_latest_version = function( response ) {
-                // console.log(response.zipball_url)
+                // console.log(response)
                 let latest_version = response.tag_name.split( 'v' )
                 let update = ( installed_version.trim() == latest_version[1] ) ? false : true
                 let zip_url = response.zipball_url
-                let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
-                console.log(module,update,latest_version,zip_url,link,container)
-                if ( update ) container.show().html( link )
+                // let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
+                // console.log(module,update,latest_version,zip_url,container)
+                // if ( update ) container.show().html( link )
+                if ( update ) {
+                    // console.log('update',container)
+                    container.show().html( 'Install Version ' + latest_version[1] ).attr( 'data-file_url', zip_url )
+                }
             }
             let source = $( element ).data( 'source' )    
             let url = `https://api.github.com/repos/` + source + `/releases/latest`
             let private = container.data( 'private' )
             let module_token = container.data( 'token' )
             if ( private && module_token !== undefined ) {
-                console.log('in module token',module_token)
+                // console.log('in module token',module_token)
                 core.ajax_headers = {'Authorization': 'token ' + module_token}
             }
             // console.log(module,installed_version,source,url)
@@ -667,7 +671,7 @@ class core implements module
             let update = ( installed_version.trim() == latest_version[1] ) ? false : true
             let zip_url = response.zipball_url
             let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
-            // console.log(module,update,latest_version,zip_url,link)
+            console.log(module,update,latest_version,zip_url,link)
             if ( update ) ( module == 'core' ) ? $( '#alert_plugin_settings' ).html( link ) : $( `#latest_` + module ).show().html( link )
         }
         let source = $( element ).data( 'source' )    
