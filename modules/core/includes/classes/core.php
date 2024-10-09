@@ -481,13 +481,13 @@ class core implements module
     public function module_management()
     {
         $modules = get_plugin_modules( PLUGIN_PATH );
-        unset( $modules['core'] );
+        // unset( $modules['core'] );
         $installed_modules = '';
         foreach ( $modules as $module_name => $module )
         {
             // print_rr($module);
             $download = $reinstall = $install_info = '';
-            $version = ( $module_name == 'core' ) ? PLUGIN_VERSION : $module['info']['version'];
+            $version = $module['info']['version'];
             if ( isset( $module['info']['source'] ) )
             {
                 $source = $module['info']['source'];
@@ -507,7 +507,6 @@ class core implements module
                 $reinstall = <<<REINSTALL
                     <a class="action" data-action="reinstall" $data_attributes onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
                 REINSTALL;
-
             }
             // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
             // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
@@ -541,32 +540,12 @@ class core implements module
             .module-description {
                 font-size: 1em;
             }
-            .module-latest {
-                /* display: none; */
-            }
             .install-info {
                 color: red;
                 display: none;
                 cursor: pointer;
             }
         </style>
-        <script type="module">
-            // import { Octokit, App } from "https://esm.sh/octokit";
-            // const octokit = new Octokit({
-            //     auth: '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'
-            // })
-            // const settings = {
-            //     // owner: 'antevasin-app',
-            //     // repo: 'module-hauora',
-            //     headers: {
-            //         'Accept': 'application/vnd.github+json'
-            //     }
-            // }
-            // const info = await octokit.request( `GET /repos/antevasin-app/module-hauora/releases/latest`, settings )
-            // if ( info.status == 200 ) {
-            //     // console.log(info.data)
-            // }
-        </script>
         HTML;        
         return $html;
     }
