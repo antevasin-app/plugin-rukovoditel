@@ -9,7 +9,6 @@ class core implements module
     private $plugin_version;
     private $core_path;
     private $app_user;
-    private $user_id;
     private $user_group_ids;
     private $user_settings;
     private $entities;
@@ -22,6 +21,8 @@ class core implements module
     private $cfg;
     private $config;
     private $index_tabs;
+    
+    protected $user_id;
 
     public function __construct( $name = null )
     {
