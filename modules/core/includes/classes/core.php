@@ -410,6 +410,36 @@ class core implements module
     }
 
     // module functions
+    public function filter_statuses()
+    {
+        global $app_logged_users_id;
+
+        if ( isset( $this->data['entities_id'] ) )
+        {
+            $heading_field_id = \fields::get_heading_id( 26 );
+            $sql = "SELECT * FROM app_entity_26 WHERE FIND_IN_SET( {$this->data['entities_id']}, field_441 )";
+            $statuses = $options = array();
+            $user_query = db_query( $sql );
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                $heading_value = \items::get_heading_field_value( $heading_field_id, $results );
+                $results['heading'] = $heading_value;
+                $statuses[$results['id']] = $results;
+                $options[] = array( 'id' => $results['id'], 'text' => $heading_value, 'html' => '<div>' . $heading_value . '</div>' );
+            }
+            // print_rr($statuses);
+            // print_rr($options);
+            // $options = array( 
+            //     array( 'id' => '69', 'text' => 'Spencer User', 'html' => '<div>Spencer User 1</div>' ),
+            //     array( 'id' => '420', 'text' => 'Rosie User', 'html' => '<div>Rosie User 2</div>' ), 
+            //     array( 'id' => '1', 'text' => 'Niamh User', 'html' => '<div>Niamh User 3</div>' ) 
+            // );
+            $response = array( 'results' => $options );
+            // die(print_rr(json_encode( $response )));
+            echo json_encode( $response );
+        }
+    }
+
     public function get_module_info( $path = false )
     {
         $file_path = ( $path ) ? $path : $this->path;
@@ -672,15 +702,109 @@ class core implements module
         return ( new \DateTime( $date, new \DateTimeZone( CFG_APP_TIMEZONE ) ) )->format( $format );
     }
 
-    public function get_date_from_timestamp( $timestamp )
+    public function get_date_obj( $timestamp )
     {
         $date_obj = new \DateTime( date( CFG_APP_DATETIME_FORMAT, $timestamp ) );
+        return $date_obj;
+    }
+
+    public function get_date_from_timestamp( $timestamp )
+    {
+        $date_obj = $this->get_date_obj( $timestamp );
         $date = array(
             'obj' => $date_obj,
             'timestamp' => $timestamp,
             'date' => $date_obj->format( CFG_APP_DATETIME_FORMAT ),
         );
         return $date;  
+    }
+
+    public function run_process()
+    {
+        if ( isset( $this->data['process_id'] ) )
+        {
+            $user_id = ( $this->user_id > 0 ) ? $this->user_id : 2 ;
+            $this->set_app_user( $user_id );
+            //check if the process exists and is active
+            $sql = "SELECT * FROM app_ext_processes WHERE id='" . db_input( $data['process_id']) . "' and is_active=1";
+            if ( !$app_process_info = db_fetch_array( db_query( $sql ) ) ) redirect_to( 'dashboard/page_not_found' );
+            if ( isset( $data['selected_items'] ) )
+            {
+                die(print_rr('selected items'));
+                $reports_id = ( isset( $_POST['reports_id'] ) ) ? $_POST['reports_id'] : 0;
+                if ( $reports_id > 0 )
+                {
+                    // need to work on this some more with testing 
+                    return;
+                    $processes = new \processes( $app_process_info['entities_id'] );
+                    $processes->run( $app_process_info, $reports_id );
+                }
+            }
+            else
+            {
+                $current_entity_id = $data['items_info']['entity_id'];
+                $current_item_id = $data['items_info']['items_id'];
+                $_POST = $data;
+                $processes = new \processes( $current_entity_id );
+                $processes->items_id = $current_item_id;
+                $processes->run( $app_process_info );
+            }   
+            if ( $redirect ) redirect_to( $this->set_app_redirect_to() );
+        }    
+    }
+
+    public static function set_app_user( $user_id = '' )
+    {
+        global $app_user, $app_logged_users_id;
+        
+        $user_id = ( empty( $user_id ) ) ? $app_logged_users_id : $user_id;
+        $sql = "select e.*, ag.name as group_name from app_entity_1 e left join app_access_groups ag on ag.id=e.field_6 where  e.id='" . db_input( $user_id ) . "' and e.field_5=1";
+        $user_query = db_query( $sql );
+        if ( $user = db_fetch_array( $user_query ) )
+        {
+            if ( strlen( $user['field_10'] ) > 0 )
+            {        
+                $file = \attachments::parse_filename( $user['field_10'] );
+                $photo = $file['file_sha1'];
+            }
+            else
+            {
+                $photo = '';
+            }           
+            $app_user = array(
+                'id' => $user['id'],          
+                'group_id' => (int) $user['field_6'],
+                'group_name'=> $user['group_name'],
+                'client_id' => $user['client_id'],
+                'multiple_access_groups' => $user['multiple_access_groups'], 
+                'name' => \users::output_heading_from_item( $user ),
+                'username' => $user['field_12'],
+                'email' => $user['field_9'],
+                'is_email_verified' => $user['is_email_verified'],
+                'photo' => $photo,
+                'language' => $user['field_13'],
+                'skin' => $user['field_14'],
+                'fields' => $user,
+            ); 
+            if ( $app_logged_users_id > 0 ) return $app_logged_users_id;
+        }
+    }
+
+    public function set_app_redirect_to() 
+    {
+        global $app_redirect_to;
+
+        if ( isset( $this->data['redirect_to'] ) ) {
+            $app_redirect_to = $this->data['redirect_to'];    
+        }
+        else if ( isset( $this->data['reports_id'] ) && is_numeric( $this->data['reports_id'] ) )
+        {
+            $app_redirect_to = "reports/view&reports_id={$this->data['reports_id']}";  
+        }
+        else {
+            $app_redirect_to = 'dashboard/';
+        }
+        return $app_redirect_to;
     }
 
     public function get_entity_field_values( $path, $field_id, $db_value = '' )
@@ -914,6 +1038,20 @@ class core implements module
             $module_user_groups_ele_id = "'#settings_module_" . $module_name . "_module_access_user_groups'";
         }
 
+    }
+
+    public function get_user_reports_id( $entities_id )
+    {
+        $reports_id = 0;
+        if ( $entities_id > 0 )
+        {
+            $sql = "SELECT * FROM `app_reports` WHERE entities_id={$entities_id} AND created_by={$this->user_id} AND reports_type='entity_menu'";
+            if ( $results = db_fetch_array( db_query( $sql ) ) )
+            {
+                $reports_id = $results['id'];
+            } 
+        }
+        return $reports_id;
     }
 
     public function get_map_markers()

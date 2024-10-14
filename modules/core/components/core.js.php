@@ -160,6 +160,50 @@ var core = core || {
         }
         // return false;
     },
+    set_ajax_dropdown:function( fields_obj ) {
+        console.log('in set_ajax_dropdown',fields_obj);
+        let obj = {
+            width: <?php echo ( is_mobile() ? '$("body").width()-70' : '"100%"' ) ?>,
+            <?php echo ( ( isset( $app_layout ) && in_array( $app_layout, ['public_layout.php'] ) || in_array( $app_module_path, ['users/account'] ) ) ? '':'dropdownParent: $("#ajax-modal"),') ?>
+            "language":{
+                "noResults" : function () { return "<?php echo addslashes( TEXT_NO_RESULTS_FOUND ) ?>"; },
+                "searching" : function () { return "<?php echo addslashes( TEXT_SEARCHING ) ?>"; },
+                "errorLoading" : function () { return "<?php echo addslashes( TEXT_RESULTS_COULD_NOT_BE_LOADED ) ?>"; },
+                "loadingMore" : function () { return "<?php echo addslashes( TEXT_LOADING_MORE_RESULTS ) ?>"; }
+            },
+            allowClear: true,
+            placeholder: "",
+            ajax: {
+                url: fields_obj.url,
+                dataType: "json",
+                type: "POST",
+                data: function( params ) {
+                    var query = {
+                        search: params.term,
+                        page: params.page || 1,
+                        form_data: $( `#${current_from_id}` ).serializeArray(),
+                    }                  
+                    // Query parameters will be ?search=[term]&page=[page]
+                    return query;
+                },
+            },
+            templateResult: function( d ) { return $( d.html ); },
+        }
+        let dropdown = $( `#fields_${fields_obj.field_id}` );
+        console.log(obj,dropdown,`currently selected value is ${dropdown.val()}`);
+        $( function() {
+            dropdown.select2( 'destroy' );        
+            dropdown.select2( obj );
+            if ( fields_obj.callback ) fields_obj.callback();
+        })
+    },
+    set_ajax_dropdown_value:function( fields_obj ) {
+        let options = new Option( fields_obj.text, fields_obj.id, false, false );
+        let field = $( `#fields_${fields_obj.field_id}` );
+        field.append( options ).trigger( 'change' );
+        field.val( fields_obj.id ).trigger( 'change' );  
+        if ( fields_obj.disabled ) field.prop( 'readonly', true );
+    },
     console_response:function( response ) {
         console.log(response);
     }

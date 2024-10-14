@@ -2,35 +2,70 @@
 
 namespace Antevasin;
 
+global $app_logged_users_id, $this_plugin;
+
+// print_rr($this_plugin); print_rr($core);
+$modules = json_encode( $this_plugin->get_modules() );
+
 ?>
 
 $.getScript( "<?php echo PLUGIN_PATH ?>js/jquery.serializeToJSON.js", function() {
     // console.log("jquery.serializeToJSON library loaded.");
 });
-var plugin = plugin || {
+var plugin = plugin || {    
+    logged_users_id: <?php echo $app_logged_users_id; ?>,
+    modules: <?php echo $modules; ?>,   
     form_element: null,
     form: {},
     log:function( text ) {
         console.log(text)   
     },
     on_modal_load:function( form ) {
+        console.log('on modal load')
         this.form_element = form;
         this.get_form();   
         this.load_modal_form_js();
     },
+    get_entities_info:function( path ) {
+        let paths = path.split( '/' );
+        let entities_info = [];
+        $.each( paths, function( index, path ) {
+            let item_info = path.split( '-' );
+            entities_info.push( item_info );
+        });
+        return entities_info;
+    },
     load_modal_form_js:function() {
+        var entities_id = 0;
+        if ( this.form['path'] !== undefined ) {
+            entities_info = this.get_entities_info( this.form['path'] );
+            entities_id = entities_info[entities_info.length - 1][0];
+            plugin.form.entities_id = entities_id;
+        }
         switch ( this.form['type'] ) {
+            case 'prepare_add_item_form':
+                console.log('this form',this.form)
+                js = 'prepare_add_item_form';
+                plugin.wait_until_exists( '#items_form' ).then( function( element ) {
+                    plugin.on_modal_load( $( '#items_form' ) );
+                });
+                break;
             case 'process':
-                js = `process_${this.form['process_id']}`
-
+                js = `process_${entities_id}`
                 break;
             case 'items_form':
-                js = `entity_${this.form['path']}`
+                js = `entity_${entities_id}`
                 break;
             default:
                 js = 'no function to run'
         }
-        console.log('js to run',js)
+        $.each( this.modules, function( name, info ) {
+            if ( window[name] ) {
+                if ( name != '' && typeof window[name][js] === 'function' ) {
+                    window[name][js]();
+                }
+            }
+        });
         if ( typeof this[js] === 'function' ) this[js]();
     },
     get_form:function() {
@@ -45,6 +80,7 @@ var plugin = plugin || {
         this.form['info'] = info;
         this.form['type'] = info['id'];
         this.get_form_hidden_inputs();
+        console.log(this.form)
     },
     get_form_hidden_inputs:function() {
         let obj = this;
@@ -85,9 +121,6 @@ var plugin = plugin || {
                 subtree: true
             });
         });
-    },
-    testing:function() {
-        console.log('this is the plugin testing function')
     }
 }
 
@@ -114,21 +147,13 @@ $( function() {
             });
         });
     });
-    // plugin.entity_26 = function() {
-    //     console.log('run entity 26 test function')
-    // }; 
-    // plugin.process_1 = function() {
-    //     console.log('run process 1 test function')
-    // };
 });
 
 ( function () {
-    this.entity_26 = function() {
-        console.log('run entity 26 test function')
+    this.entity_69 = function() {
+        // console.log('run entity 69 plugin function',plugin.form)
+        
     }; 
-    this.process_1 = function() {
-        console.log('run process 1 test function')
-    };
 }).apply( plugin );
 
 
