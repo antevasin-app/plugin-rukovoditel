@@ -12,7 +12,6 @@ class core implements module
     private $user_group_ids;
     private $user_settings;
     private $entities;
-    private $data;
     private $name;
     private $title;
     private $path;
@@ -22,6 +21,7 @@ class core implements module
     private $config;
     private $index_tabs;
     
+    protected $data;
     protected $user_id;
 
     public function __construct( $name = null )
@@ -85,6 +85,11 @@ class core implements module
     public function set_index_tabs( $tabs )
     {
         $this->index_tabs = $tabs;
+    }
+
+    public function set_user_id( $user_id )
+    {
+        $this->user_id = $user_id;
     }
 
     // getter functions

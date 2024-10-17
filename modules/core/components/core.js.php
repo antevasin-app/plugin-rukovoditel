@@ -198,6 +198,7 @@ var core = core || {
         })
     },
     set_ajax_dropdown_value:function( fields_obj ) {
+        console.log(fields_obj);
         let options = new Option( fields_obj.text, fields_obj.id, false, false );
         let field = $( `#fields_${fields_obj.field_id}` );
         field.append( options ).trigger( 'change' );
@@ -248,71 +249,10 @@ var maps = maps || {
             init_map();
         }
     },
-    buildContent_:function( property ) {
-        const content = document.createElement("div");
-    
-        content.classList.add("property");
-        content.innerHTML = `
-        <div class="icon">
-            <i aria-hidden="true" class="fa fa-icon fa-${property.type}" title="${property.type}"></i>
-            <span class="fa-sr-only">${property.type}</span>
-        </div>
-        <div class="details">
-            <div class="price">${property.price}</div>
-            <div class="address">${property.address}</div>
-            <div class="features">
-            <div>
-                <i aria-hidden="true" class="fa fa-bed fa-lg bed" title="bedroom"></i>
-                <span class="fa-sr-only">bedroom</span>
-                <span>${property.bed}</span>
-            </div>
-            <div>
-                <i aria-hidden="true" class="fa fa-bath fa-lg bath" title="bathroom"></i>
-                <span class="fa-sr-only">bathroom</span>
-                <span>${property.bath}</span>
-            </div>
-            <div>
-                <i aria-hidden="true" class="fa fa-ruler fa-lg size" title="size"></i>
-                <span class="fa-sr-only">size</span>
-                <span>${property.size} ft<sup>2</sup></span>
-            </div>
-            </div>
-        </div>
-        `;
-        return content;
-    },
     buildContent:function( marker ) {
-        const content = document.createElement("div");
-    
+        const content = document.createElement("div");    
         content.classList.add("marker");
         content.innerHTML = marker.html;
-        // content.innerHTML = `
-        // <div class="icon">
-        //     <i aria-hidden="true" class="fa fa-icon fa-${marker.type}" title="${marker.type}"></i>
-        //     <span class="fa-sr-only">${marker.type}</span>
-        // </div>
-        // <div class="details">
-        //     <div class="price">${marker.price}</div>
-        //     <div class="address">${marker.address}</div>
-        //     <div class="features">
-        //     <div>
-        //         <i aria-hidden="true" class="fa fa-bed fa-lg bed" title="bedroom"></i>
-        //         <span class="fa-sr-only">bedroom</span>
-        //         <span>${marker.bed}</span>
-        //     </div>
-        //     <div>
-        //         <i aria-hidden="true" class="fa fa-bath fa-lg bath" title="bathroom"></i>
-        //         <span class="fa-sr-only">bathroom</span>
-        //         <span>${marker.bath}</span>
-        //     </div>
-        //     <div>
-        //         <i aria-hidden="true" class="fa fa-ruler fa-lg size" title="size"></i>
-        //         <span class="fa-sr-only">size</span>
-        //         <span>${marker.size} ft<sup>2</sup></span>
-        //     </div>
-        //     </div>
-        // </div>
-        // `;
         return content;
     },
     toggleHighlight:function( markerView, marker ) {
@@ -381,9 +321,8 @@ var maps = maps || {
                                     content: maps.buildContent( marker ),
                                     position: position,
                                     title: marker.description,
-                                });
-                            
-                                AdvancedMarkerElement.addListener( "click", () => {
+                                });                            
+                                AdvancedMarkerElement.addListener( "gmp-click", () => {
                                     maps.toggleHighlight( AdvancedMarkerElement, marker );
                                 });
                             });
@@ -396,12 +335,30 @@ var maps = maps || {
         }
     },
     get_location:function( callback ) {
+        console.log('in core get_location');
         if ( navigator.geolocation ) {
             navigator.geolocation.getCurrentPosition( callback );
         } else {
             console.log("Geolocation is not supported by this browser.");
             return {error: "Geolocation is not supported by this browser."};
         }
+    },
+    open_map_directions:function( element ) {
+        // console.log(element)
+        let destination = $( element ).data('destination');
+        let url = `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${destination}`;
+        // console.log(url);
+        window.open( url, '_blank' ).focus();
+    },
+    directions_btn_action:function() {
+        $( '.directions-btn' ).on( 'click', function() {
+            maps.open_map_directions( this );
+            // console.log(this)
+            // let destination = $( this ).data('destination');
+            // let url = `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${destination}`;
+            // console.log(url);
+            // window.open( url, '_blank' ).focus();
+        });
     },
     get_google_direction_url:function( data ) {
         // see https://developers.google.com/maps/documentation/urls/get-started#directions-action
