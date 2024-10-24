@@ -92,7 +92,7 @@ class plugin
       
     public function set_user_access()
     {
-        global $app_user;
+        global $app_user, $app_action;
 
         $is_system_admin = $is_plugin_admin = $is_module_user = false;
         if ( $this->public_module_access )
@@ -115,6 +115,11 @@ class plugin
             }
         }
         if ( \guest_login::is_guest() || IS_AJAX )
+        {
+            $is_module_user = true;
+        }
+        $allowed_module_actions = array( 'reports_groups' );
+        if ( in_array( $app_action, $allowed_module_actions ) )
         {
             $is_module_user = true;
         }

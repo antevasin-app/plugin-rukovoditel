@@ -160,6 +160,67 @@ var core = core || {
         }
         // return false;
     },
+    filter_status_field:function() {
+        console.log(plugin.form); 
+        if ( plugin.form.entities_id ) {
+            // let url = `${core.url}&action=filter_status_field&entities_id=${plugin.form.entities_id}`;
+            let get_default_url = `${core.url}&action=filter_statuses&get_default=true&entities_id=${plugin.form.entities_id}`;
+            let get_default_callback = function( response ) {
+                // console.log(response);
+                if ( response != '' ) {
+                    let response_obj = JSON.parse( response );
+                    // console.log(response_obj);
+                    if ( response_obj.field_id && response_obj.default ) {
+                        let field_id = response_obj.field_id;
+                        let status_field = $( `#fields_${field_id}` );
+                        if ( status_field.val() === null ) {
+                            $.each( response_obj.default, function( index, option_obj ) {
+                                // console.log(option_obj);
+                                core.set_ajax_dropdown_value( option_obj );
+                            });
+                        } else {
+                            console.log('status field already has a value');
+                        }
+                        let ajax_dropdown_callback = function() {
+                            console.log('in ajax_dropdown_callback function');
+                        }
+                        let ajax_dropdown_url = `${core.url}&action=filter_statuses&entities_id=${plugin.form.entities_id}`;
+                        core.set_ajax_dropdown( {url:ajax_dropdown_url,field_id:field_id,ajax_dropdown_callback} );
+                        // console.log(response_obj.data);
+                        // $( '#fields_status_id' ).html( response_obj.data );
+                    }
+                }
+            }
+            core.ajax_get( get_default_url, get_default_callback );
+        }
+    },
+    set_ajax_field_default:function( field_id, disabled = false ) {
+        if ( plugin.form.entities_id ) {
+            let url = `${core.url}&action=set_ajax_field_default&entities_id=${plugin.form.entities_id}&field_id=${field_id}`; 
+            let callback = function( response ) {
+                console.log(response);
+                if ( response != '' ) {
+                    let response_obj = JSON.parse( response );
+                    console.log(response_obj);
+                    if ( response_obj.default ) {
+                        let field = $( `#fields_${field_id}` );
+                        if ( field.val() === null || field.val().length == 0 ) {
+                            $.each( response_obj.default, function( index, option_obj ) {
+                                // console.log(option_obj);
+                                if ( disabled ) {
+                                    option_obj['disabled'] = true;
+                                }
+                                core.set_ajax_dropdown_value( option_obj );
+                            });
+                        } else {
+                            console.log('field already has a value');
+                        }
+                    }
+                }
+            } 
+            core.ajax_get( url, callback );
+        }
+    },
     set_ajax_dropdown:function( fields_obj ) {
         console.log('in set_ajax_dropdown',fields_obj);
         let obj = {
@@ -190,20 +251,57 @@ var core = core || {
             templateResult: function( d ) { return $( d.html ); },
         }
         let dropdown = $( `#fields_${fields_obj.field_id}` );
-        console.log(obj,dropdown,`currently selected value is ${dropdown.val()}`);
         $( function() {
             dropdown.select2( 'destroy' );        
             dropdown.select2( obj );
             if ( fields_obj.callback ) fields_obj.callback();
         })
     },
-    set_ajax_dropdown_value:function( fields_obj ) {
-        console.log(fields_obj);
-        let options = new Option( fields_obj.text, fields_obj.id, false, false );
-        let field = $( `#fields_${fields_obj.field_id}` );
+    set_ajax_dropdown_value:function( option_obj ) {
+        // console.log(option_obj);
+        let options = new Option( option_obj.text, option_obj.id, false, false );
+        let field = $( `#fields_${option_obj.field_id}` );
         field.append( options ).trigger( 'change' );
-        field.val( fields_obj.id ).trigger( 'change' );  
-        if ( fields_obj.disabled ) field.prop( 'readonly', true );
+        // console.log(`option obj is `,option_obj,`existing field value is`,field.val()); 
+        if ( field.prop( 'multiple' ) ) {
+            let selected_values = field.val() || [];
+            if ( !selected_values.includes( option_obj.id ) ) {
+                selected_values.push( option_obj.id );
+            }
+            field.val( selected_values )
+        } else {
+            field.val( option_obj.id );
+        }
+        if ( option_obj.disabled ) {
+            this.disable_ajax_dropdown( option_obj.field_id );
+        }
+        field.trigger( 'change' );
+    },
+    disable_ajax_dropdown:function( field_id ) {
+        let field = $( `#fields_${field_id}` );
+        field.on( 'select2:opening.select2-disable', function( e ) {
+            e.preventDefault()
+        })
+        .on( 'select2:clearing.select2-disable', function( e ) {
+            e.preventDefault()
+        })
+    },
+    enable_ajax_dropdown:function( field_id ) {
+        let field = $( `#fields_${field_id}` );
+        field.off( 'select2:opening.select2-disable' )
+        .off( 'select2:clearing.select2-disable' )
+    },
+    manually_assign_user_checkbox:function( fields_obj ) {
+        $( `#fields_${fields_obj.trigger_field_id}` ).on( 'change', function() {
+            if (  $( this ).closest( 'span' ).hasClass( 'checked' ) ) {
+                core.users_id = $( `#fields_${fields_obj.users_field_id}` ).val();
+                console.log(core.users_id);
+                core.enable_ajax_dropdown( fields_obj.users_field_id );
+            } else {
+                $( `#fields_${fields_obj.users_field_id}` ).val( core.users_id ).trigger( 'change' );
+                core.disable_ajax_dropdown( fields_obj.users_field_id );                    
+            }
+        });
     },
     console_response:function( response ) {
         console.log(response);
