@@ -161,10 +161,11 @@ var core = core || {
         // return false;
     },
     filter_status_field:function() {
-        console.log(plugin.form); 
+        // console.log(plugin.form); 
         if ( plugin.form.entities_id ) {
             // let url = `${core.url}&action=filter_status_field&entities_id=${plugin.form.entities_id}`;
             let get_default_url = `${core.url}&action=filter_statuses&get_default=true&entities_id=${plugin.form.entities_id}`;
+            // console.log(get_default_url);
             let get_default_callback = function( response ) {
                 // console.log(response);
                 if ( response != '' ) {
@@ -198,10 +199,10 @@ var core = core || {
         if ( plugin.form.entities_id ) {
             let url = `${core.url}&action=set_ajax_field_default&entities_id=${plugin.form.entities_id}&field_id=${field_id}`; 
             let callback = function( response ) {
-                console.log(response);
+                // console.log(response);
                 if ( response != '' ) {
                     let response_obj = JSON.parse( response );
-                    console.log(response_obj);
+                    // console.log(response_obj);
                     if ( response_obj.default ) {
                         let field = $( `#fields_${field_id}` );
                         if ( field.val() === null || field.val().length == 0 ) {
@@ -222,7 +223,7 @@ var core = core || {
         }
     },
     set_ajax_dropdown:function( fields_obj ) {
-        console.log('in set_ajax_dropdown',fields_obj);
+        // console.log('in set_ajax_dropdown',fields_obj);
         let obj = {
             width: <?php echo ( is_mobile() ? '$("body").width()-70' : '"100%"' ) ?>,
             <?php echo ( ( isset( $app_layout ) && in_array( $app_layout, ['public_layout.php'] ) || in_array( $app_module_path, ['users/account'] ) ) ? '':'dropdownParent: $("#ajax-modal"),') ?>
@@ -265,9 +266,12 @@ var core = core || {
         // console.log(`option obj is `,option_obj,`existing field value is`,field.val()); 
         if ( field.prop( 'multiple' ) ) {
             let selected_values = field.val() || [];
+            // console.log('selected values before',selected_values); 
             if ( !selected_values.includes( option_obj.id ) ) {
+                // console.log('pushing value');
                 selected_values.push( option_obj.id );
             }
+            // console.log('selected values after',selected_values);
             field.val( selected_values )
         } else {
             field.val( option_obj.id );
@@ -276,6 +280,39 @@ var core = core || {
             this.disable_ajax_dropdown( option_obj.field_id );
         }
         field.trigger( 'change' );
+    },
+    populate_contact_fields:function( fields_obj) {
+        let trigger_field_id = fields_obj.trigger_field_id;
+        let trigger_field = $( `#fields_${trigger_field_id}` );
+        trigger_field.on( 'change', function() {
+            let items_id = $( this ).val();     
+            let url = `${core.url}&action=populate_contact_fields&field_id=${fields_obj.trigger_field_id}&items_id=${items_id}`;
+            let callback = function( response ) {
+                if ( response != '' ) {
+                    let response_obj = JSON.parse( response );
+                    if ( response_obj.success ) {
+                        let data = response_obj.data;
+                        // console.log(data.fields);
+                        $.each( data.fields, function( field_id, items ) {
+                            // console.log(field_id,items);
+                            let field = $( `#fields_${field_id}` );
+                            if ( field.val() === null || field.val().length == 0 ) {
+                                $.each( items, function( items_id, title ) {
+                                    // console.log(items_id,title);
+                                    let option_obj = {field_id:field_id,id:items_id,text:title};
+                                    core.set_ajax_dropdown_value( option_obj );
+                                });
+                            } else if ( items === '' ) {
+                                // console.log('field already has a value and items is empty so clear fields');
+                                // field.val( null ).trigger( 'change' );
+                                $( `#fields_${field_id} option` ).remove();
+                            }
+                        });
+                    }
+                }
+            }
+            core.ajax_get( url, callback );     
+        })
     },
     disable_ajax_dropdown:function( field_id ) {
         let field = $( `#fields_${field_id}` );

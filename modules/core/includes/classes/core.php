@@ -22,7 +22,8 @@ class core implements module
     private $index_tabs;
     private $get_default = false;
 
-    protected $items = array();    
+    protected $items = array(); 
+    protected $items_info = array();
     protected $data;
     protected $user_id;
     protected $system_log_data = array();
@@ -360,6 +361,15 @@ class core implements module
             return $config['entity_id'];
         }
     }
+    
+    protected function get_field_entity_id( $field_id )
+    {
+        $sql = "SELECT * FROM app_fields WHERE id=$field_id";
+        if ( $result = db_fetch_array( db_query( $sql ) ) )
+        {
+            return $result['entities_id'];
+        }
+    }
 
     protected function get_field_id( $entity_id, $field_name )
     {
@@ -376,6 +386,22 @@ class core implements module
         if ( $result = db_fetch_array( db_query( $sql ) ) )
         {
             return $result['id'];
+        }
+    }
+
+    public function get_entity_fields()
+    {
+        if ( isset( $this->data['entities_id'] ) )
+        {
+            $entities_id = $this->data['entities_id'];
+            $sql = "SELECT * FROM app_fields WHERE entities_id=$entities_id AND type LIKE 'fieldtype_entity_%'";
+            $user_query = db_query( $sql );
+            $fields = array();
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                $fields[$results['id']] = $results;
+            }
+            return $fields;
         }
     }
 
@@ -452,6 +478,13 @@ class core implements module
 
     public function db_insert( $entities_id, $sql_data )
     {
+        global $app_user;
+        
+        if ( !isset( $sql_data['created_by'] ) )
+        {
+            $user_id = ( empty( $app_user ) ) ? 2 : $app_user['id'];
+            $sql_data['created_by'] = $user_id;
+        }
         foreach ( $sql_data as $field => $value )
         {
             if ( empty( $value ) ) unset( $sql_data[$field] );
@@ -566,16 +599,29 @@ class core implements module
         }
     }
 
-    public function statuses_select2_entities_filter()
+    public function select2_statuses_filter()
     {
-        // print_rr($this->data);
-        $filter_entity_id = $this->data['field_entity_id'];
-        // $default_field_id = $this->get_field_id( $statuses_entity_id, 'default' );
-        $field_id = $this->data['field_entity_id'];
+        global $app_action;
+        // print_rr($this->data); print_rr($app_action);
+        switch ( $app_action )
+        {
+            case 'select2_json':
+                $forms_entity_id = $this->get_field_entity_id(  $this->data['field_id'] );
+                $filter_entity_id = $this->data['entity_id'];
+                break;
+            case 'select2_entities_filter':
+                $forms_entity_id = $this->data['entity_id'];
+                $filter_entity_id = $this->data['entities_id'];
+                break;
+            default:
+                die(print_rr('default app_action in core module select2_statuses_filter'));
+                break;
+        }
+        $field_id = $this->data['field_id'];
         $heading_field_id = \fields::get_heading_id( $filter_entity_id );
         $forms_field_id = $this->get_field_id( $filter_entity_id, 'forms' );
         $system_status_field_id = $this->get_field_id( $filter_entity_id, 'system status' );
-        $sql = "SELECT * FROM app_entity_$filter_entity_id WHERE FIND_IN_SET( {$this->data['entity_id']}, field_$forms_field_id ) AND field_$system_status_field_id='true'";
+        $sql = "SELECT * FROM app_entity_$filter_entity_id WHERE FIND_IN_SET( $forms_entity_id, field_$forms_field_id ) AND field_$system_status_field_id='true'";
         // print_rr($sql);  
         $user_query = db_query( $sql );
         while ( $results = db_fetch_array( $user_query ) )
@@ -726,6 +772,70 @@ class core implements module
         else
         {
             echo '{"error":"in core set_ajax_field_default function"}';
+        }
+    }
+
+    public function populate_contact_fields()
+    {
+        // print_rr($this->data);
+        if ( isset( $this->data['field_id'] ) && isset( $this->data['items_id'] ) )
+        {
+            $this->items_info['entities_id'] = $this->get_field_entity_id( $this->data['field_id'] );
+            $this->items_info['items_id'] = $this->data['items_id'];
+            $customer_info = $this->get_customer_info();
+        }
+    }
+
+    public function get_customer_info()
+    {
+        if ( !empty( $this->items_info ) )
+        {
+            // print_rr($this->data); print_rr($this->items_info);
+            $sql = "
+                SELECT * 
+                FROM app_entity_{$this->items_info['entities_id']} 
+                WHERE id={$this->items_info['items_id']}
+            ";
+            $entities_id = $this->items_info['entities_id'];
+            $addresses_field_id = $this->get_field_id( $entities_id, 'addresses' );
+            $contacts_field_id = $this->get_field_id( $entities_id, 'contacts' );
+            $emails_field_id = $this->get_field_id( $entities_id, 'email addresses' );
+            $items_id = $this->items_info['items_id'];
+            if ( empty( $items_id ) )
+            {
+                $customer_info['fields'][$addresses_field_id] = '';
+                $customer_info['fields'][$contacts_field_id] = '';
+                $customer_info['fields'][$emails_field_id] = '';
+            }
+            else
+            {
+                $sql = "
+                    SELECT customers.*, addresses.id AS addresses_id, addresses.*, contacts.id AS contacts_id, contacts.*, emails.id AS emails_id, emails.* 
+                    FROM app_entity_63 AS customers
+                    LEFT JOIN app_entity_32 AS addresses
+                    ON FIND_IN_SET( addresses.id, customers.field_1207 )
+                    LEFT JOIN app_entity_38 AS contacts
+                    ON FIND_IN_SET( contacts.id, customers.field_1206 )
+                    LEFT JOIN app_entity_50 AS emails
+                    ON FIND_IN_SET( emails.id, customers.field_1209 )
+                    WHERE customers.id IN ( $items_id );
+                ";
+                // print_rr($sql);
+                $user_query = db_query( $sql );
+                while ( $result = db_fetch_array( $user_query ) )
+                {
+                    // print_rr($result);
+                    $customer_info['id'] = $result['id'];
+                    $addresses_heading_field_id = \fields::get_heading_id( 32 );
+                    $customer_info['fields'][$addresses_field_id][$result['addresses_id']] = $result["field_$addresses_heading_field_id"];
+                    $contacts_heading_field_id = \fields::get_heading_id( 38 );
+                    $customer_info['fields'][$contacts_field_id][$result['contacts_id']] = $result["field_$contacts_heading_field_id"];
+                    $emails_heading_field_id = \fields::get_heading_id( 50 );
+                    $customer_info['fields'][$emails_field_id][$result['emails_id']] = $result["field_$emails_heading_field_id"];
+                }
+                // print_rr($customer_info);
+            }
+            echo '{"success":"in core module get_customer_info function","data":' . json_encode( $customer_info ) . '}';                  
         }
     }
 

@@ -92,36 +92,30 @@ class plugin
       
     public function set_user_access()
     {
-        global $app_user, $app_action;
+        global $app_user, $plugin, $app_module, $app_action;
 
-        $is_system_admin = $is_plugin_admin = $is_module_user = false;
+        $is_system_admin = $is_plugin_admin = false;
+        $is_module_user = true;
         if ( $this->public_module_access )
         {
             $is_module_user = true;
         }
         if ( isset( $app_user ) )
         {
+            if ( $plugin == 'antevasin' && in_array( $app_module, array_keys( $this->modules ) ) )
+            {
+                // check plugin and module settings to determine what plugin modules or actions they have access to
+                $is_module_user = false;
+                
+            }
             if ( $app_user['group_id'] === 0 )
             {
                 $is_system_admin = true;
                 $is_plugin_admin = true;
                 $is_module_user = true;
             }
-            if ( false )
-            {
-                // check plugin settings
-                $is_plugin_admin = true;
-                $is_module_user = true;
-            }
-        }
-        if ( \guest_login::is_guest() || IS_AJAX )
-        {
-            $is_module_user = true;
-        }
-        $allowed_module_actions = array( 'reports_groups' );
-        if ( in_array( $app_action, $allowed_module_actions ) )
-        {
-            $is_module_user = true;
+            if ( IS_AJAX ) $is_module_user = true;
+            // print_rr(IS_AJAX); print_rr($this); print_rr(array_keys( $this->modules )); print_rr("plugin is $plugin"); print_rr("app module is $app_module"); print_rr("app action is $app_action"); print_rr("is module user is $is_module_user"); die('pause');
         }
         if ( !defined( 'IS_SYSTEM_ADMIN' ) ) define( 'IS_SYSTEM_ADMIN', $is_system_admin );
         if ( !defined( 'IS_PLUGIN_ADMIN' ) ) define( 'IS_PLUGIN_ADMIN', $is_plugin_admin );
