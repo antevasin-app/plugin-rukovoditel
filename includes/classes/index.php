@@ -27,7 +27,7 @@ class index
         $module_name = $this->module->get_name();
         $form->set_action ( url_for( 'configuration/save', "redirect_to=" . PLUGIN_NAME . "/$module_name/index" ) );
         $form->set_title ( $this->title, $this->title_link );  
-        $this->module->module_index_tabs( $form );
+        // $this->module->module_index_tabs( $form );
         $config = $this->module->get_config();
         $private = ( isset( $this->module->get_info()->private ) && $this->module->get_info()->private ) ? true : false;
         $token = ( isset( $config->token ) ) ? $config->token : '';
@@ -104,11 +104,6 @@ class index
                 'label' => 'Source File',
                 'field' => $this->get_repository_link()
             );
-            $tabs[0]['sections'][0]['groups'][] = array( 
-                'label' => 'Branch',
-                'field_class' => 'plugin-info',
-                'field' => $form->add_tag( 'select', 'module_branches', array( $module_info->branch => $module_info->branch ), $module_info->branch, array( 'size' => 'small' ) )
-            );
         } 
         if ( $private )
         {
@@ -143,6 +138,7 @@ class index
             .action {
                 cursor: pointer;               
                 text-decoration: underline;
+                padding: 0 5px 0 5px;
             }
             .plugin-info { 
                 padding-top: 8px; 
@@ -165,7 +161,7 @@ class index
         $file_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
         $private = ( isset( $this->module->get_config()->token ) ) && !empty( isset( $this->module->get_config()->token ) ) ? 1 : 0;
         $token = ( $private ) ? 'data-source_token="' . $this->module->get_config()->token . '"' : '';
-        return $this->module->get_info()->version . '<a style="padding: 0 10px 0 10px;" data-action="download" data-module="' . $module_name . '" data-version="' . PLUGIN_VERSION . '" data-source="' . $source . '" data-file_url="' . $file_url . '" data-private="' . $private . '"'. $token . ' onclick="core.files( this )"><i class="fa fa-download"></i></a>' . $this->module->get_reinstall_link( $module_name );
+        return $this->module->get_info()->version . '<a class="action" data-action="download" data-module="' . $module_name . '" data-version="' . PLUGIN_VERSION . '" data-source="' . $source . '" data-file_url="' . $file_url . '" data-private="' . $private . '"'. $token . ' onclick="core.files( this )"><i class="fa fa-download"></i></a>' . $this->module->get_reinstall_link( $module_name );
     }
 
     private function get_repository_link()
