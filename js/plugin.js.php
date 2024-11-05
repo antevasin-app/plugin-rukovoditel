@@ -21,7 +21,7 @@ var plugin = plugin || {
         console.log(text)   
     },
     on_modal_load:function( form ) {
-        console.log('on modal load')
+        // console.log('on modal load')
         this.form_element = form;
         this.get_form();   
         this.load_modal_form_js();
@@ -80,7 +80,7 @@ var plugin = plugin || {
         this.form['info'] = info;
         this.form['type'] = info['id'];
         this.get_form_hidden_inputs();
-        console.log(this.form)
+        // console.log(this.form)
     },
     get_form_hidden_inputs:function() {
         let obj = this;

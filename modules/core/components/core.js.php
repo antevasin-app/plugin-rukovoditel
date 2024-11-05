@@ -128,9 +128,14 @@ var core = core || {
     files:function( element ) {
         let action = $( element ).data( 'action' );
         let module = $( element ).data( 'module' );
-        let file_url = $( element ).data( 'file_url' );
+        var file_url = $( element ).data( 'file_url' );
         let private = $( element ).data( 'private' );
-        let source_token = $( element ).data( 'source_token' );
+        var source_token = $( element ).data( 'source_token' );
+        if ( action == 'latest_branch_commit' ) {
+            file_url = $( `#${module}_module_branches` ).find( ':selected' ).data( 'branch_zip_url' );
+            source_token = $( `#${module}_module_branches` ).data( 'source_token' );
+        }
+        // console.log(file_url,source_token);
         let data = {
             module_name: module,
             file_url: file_url,

@@ -179,7 +179,7 @@ class core implements module
                     array(     
                         'label' => 'Installed Version',
                         'field_class' => 'plugin-info',
-                        'field' => PLUGIN_VERSION . '<a id="plugin_version" style="padding: 0 10px 0 10px;" data-action="download" data-module="core" data-version="' . PLUGIN_VERSION . '" data-source="' . $source . '" data-file_url="' . $file_url . '" data-private="' . $private . '" onclick="core.files( this )"><i class="fa fa-download"></i></a>' . $reinstall_link
+                        'field' => PLUGIN_VERSION . '<a id="plugin_version" class="action" data-action="download" data-module="core" data-version="' . PLUGIN_VERSION . '" data-source="' . $source . '" data-file_url="' . $file_url . '" data-private="' . $private . '" onclick="core.files( this )"><i class="fa fa-download"></i></a>' . $reinstall_link
                     ),
                     array(     
                         'label' => 'Plugin Source',
@@ -939,13 +939,21 @@ class core implements module
                     <a class="install-info" data-action="install" data-module="$module_name" data-path="{$module['path']}" data-source="$source" data-private="$private" data-token="$token" onclick="core.files( this )"></a>
                 INFO;
                 $download = <<<DOWNLOAD
-                    <a style="padding: 0 10px 0 10px;" data-action="download" $data_attributes onclick="core.files( this )"><i class="fa fa-download"></i></a>
+                    <a class="action" data-action="download" $data_attributes onclick="core.files( this )"><i class="fa fa-download"></i></a>
                 DOWNLOAD;
                 // $download = ( $module['name'] == 'core' ) ? '' : $download_link;
                 $reinstall = <<<REINSTALL
                     <a class="action" data-action="reinstall" $data_attributes onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
                 REINSTALL;
+                $branches = select_tag( $module_name . "_module_branches", array(), $module['info']['branch'], array( 'class' => 'module_branches', 'size' => 'small', 'style' => 'margin-left: 20px;', 'data-source_token' => $token ) );
+                $latest_commit_data_attributes = <<<DATA
+                    data-module="{$module['name']}" data-source="$source" data-private="$private" 
+                DATA;
+                $latest_branch_commit = <<<LATEST_COMMIT
+                    <a class="action" data-action="latest_branch_commit" $latest_commit_data_attributes onclick="core.files( this )"><i class="fa fa-code-fork" aria-hidden="true"></i></a>                
+                LATEST_COMMIT;
             }
+            $file_actions = ( $this->check_link_files() ) ? $reinstall . $branches . $latest_branch_commit : '';
             // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
             // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
             // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
@@ -953,7 +961,7 @@ class core implements module
             $installed_modules .= '
                 <li>
                     <div>
-                        <span class="module-name" id="module_' . $module_name . '" data-installed_version="' . $version . '"><a href="' . $module_index_url . '">' . $module['info']['title'] . '</a></span><span class="module-version">v' . $version . '</span>' . $download . $reinstall . '
+                        <span class="module-name" id="module_' . $module_name . '" data-installed_version="' . $version . '"><a href="' . $module_index_url . '">' . $module['info']['title'] . '</a></span><span class="module-version">v' . $version . '</span>' . $download . $file_actions . '
                         <div class="module-description">' . $module['info']['description'] . '</div>
                         ' . $install_info . '
                     </div>
@@ -988,6 +996,15 @@ class core implements module
         return $html;
     }
 
+    private function check_link_files()
+    {
+        $is_link = false;
+        $module_name = $this->get_name();
+        $is_link_file = PLUGIN_PATH . 'modules/' . $module_name . '/module.json';
+        if ( is_link( $is_link_file ) ) $is_link = true;
+        return $is_link;  
+    }
+
     public function get_reinstall_link() : string
     {
         // die(print_rr($this));
@@ -1010,7 +1027,7 @@ class core implements module
         $script = <<<SCRIPT
         const repos_url = `https://api.github.com/repos/`
         let modules = $( `.module-info` )
-        let branch_select = $( '#module_branches' )
+        let branch_select = $( '.module_branches' )
         let branches = {}
         let source = $( '#source' ).html()
         let module_token = $( '#module_token' ).val()
@@ -1024,17 +1041,17 @@ class core implements module
         let branch_options = $( '#plugin_branch option' )
         // console.log(branch_options)
         let get_branches = function( response ) {
-            // console.log(branches) 
             $.each( response, function( index, branch ) {
                 let name = branch.name
                 let sha = branch.commit.sha
-                let url = branch.commit.url
+                let branch_zip_url = 'https://github.com/' + source + '/archive/refs/heads/' + name + '.zip'
+                let commit_url = branch.commit.url
                 if ( branches[name] !== undefined ) {
-                    // console.log('branch exists',name)
-                    $( branches[name] ).attr( 'sha', sha )
-                    $( branches[name] ).attr( 'url', url )
+                    // console.log('branch already exists in dropdown',name)
+                    // $( branches[name] ).attr( 'data-sha', sha )
+                    // $( branches[name] ).attr( 'data-commit_url', commit_url )
                 } else {
-                    branch_select.append( '<option value="' + name + '" sha-"' + sha + '" url="' + url +'">' + name + '</option>' )
+                    branch_select.append( '<option value="' + name + '" data-branch_zip_url="' + branch_zip_url + '" data-sha="' + sha + '" data-commit_url="' + commit_url +'">' + name + '</option>' )
                 }
             })    
         }
