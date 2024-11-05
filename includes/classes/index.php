@@ -50,7 +50,7 @@ class index
                             array(
                                 'field_class' => 'plugin-info version',
                                 'label' => 'Installed Version',
-                                'field' => $this->get_source_link()
+                                'field' => $this->module->get_info()->version
                             ),
                             array(
                                 'field_class' => 'plugin-info',
@@ -148,10 +148,10 @@ class index
         STYLE;
         $form->add_style( $style );
         $form->add_script( 'core.setup_module_index();' );
-        $form->add_script( $this->module->get_source_script( $this->module ) );
         echo $form->render();
     }
 
+    // REVIEW and remove when confirmed it is no longer required
     private function get_source_link()
     {
         $module_name = $this->module->get_name();

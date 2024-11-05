@@ -128,21 +128,21 @@ var core = core || {
     files:function( element ) {
         let action = $( element ).data( 'action' );
         let module = $( element ).data( 'module' );
-        var file_url = $( element ).data( 'file_url' );
-        let private = $( element ).data( 'private' );
-        var source_token = $( element ).data( 'source_token' );
+        let module_info = $( `#installed_module_${module}` );
+        var file_url = module_info.data( 'release_url' );
+        let private = module_info.data( 'private' );
+        var source_token = module_info.data( 'source_token' );
         if ( action == 'latest_branch_commit' ) {
-            file_url = $( `#${module}_module_branches` ).find( ':selected' ).data( 'branch_zip_url' );
-            source_token = $( `#${module}_module_branches` ).data( 'source_token' );
+            file_url = $( `#module_branches_${module}` ).find( ':selected' ).data( 'branch_zip_url' );
+            source_token = $( `#module_branches_${module}` ).data( 'source_token' );
         }
-        // console.log(file_url,source_token);
+        console.log(file_url,source_token);
         let data = {
             module_name: module,
             file_url: file_url,
             private: private,
             source_token: source_token
         }
-        console.log(action)
         if ( action == 'download' ) {
             let callback = function( response ) {
                 if ( response != '') {

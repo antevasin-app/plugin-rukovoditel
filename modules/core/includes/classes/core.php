@@ -4,6 +4,7 @@ namespace Antevasin;
 
 class core implements module
 {
+    private $debug = false;
     private $plugin_name;
     private $plugin_path;
     private $plugin_version;
@@ -930,46 +931,42 @@ class core implements module
             if ( isset( $module['info']['source'] ) )
             {
                 $source = $module['info']['source'];
-                $file_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
+                $release_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
                 $token = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? $module['config']['token'] : '';
                 $private = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? 1 : 0;
-                $data_attributes = <<<DATA
-                    data-module="{$module['name']}" data-source="$source" data-file_url="$file_url" data-private="$private" data-source_token="$token"
-                DATA;
-                $install_info = <<<INFO
-                    <a class="install-info" data-action="install" data-module="$module_name" data-path="{$module['path']}" data-source="$source" data-private="$private" data-token="$token" onclick="core.files( this )"></a>
-                INFO;
                 $download = <<<DOWNLOAD
-                    <a class="action" data-action="download" $data_attributes onclick="core.files( this )"><i class="fa fa-download"></i></a>
+                    <a class="action" data-action="download" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-download"></i></a>
                 DOWNLOAD;
                 // $download = ( $module['name'] == 'core' ) ? '' : $download_link;
                 $reinstall = <<<REINSTALL
-                    <a class="action" data-action="reinstall" $data_attributes onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
+                    <a class="action" data-action="reinstall" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
                 REINSTALL;
-                $branches = select_tag( $module_name . "_module_branches", array(), $module['info']['branch'], array( 'class' => 'module_branches', 'size' => 'small', 'style' => 'margin-left: 20px;', 'data-source_token' => $token ) );
-                $latest_commit_data_attributes = <<<DATA
-                    data-module="{$module['name']}" data-source="$source" data-private="$private" 
-                DATA;
+                $branches = select_tag(  "module_branches_$module_name", array( 0 => '' ), 0, array( 'class' => 'module_branches', 'size' => 'small', 'style' => 'margin-left: 20px;', 'data-source_token' => $token ) );
                 $latest_branch_commit = <<<LATEST_COMMIT
-                    <a class="action" data-action="latest_branch_commit" $latest_commit_data_attributes onclick="core.files( this )"><i class="fa fa-code-fork" aria-hidden="true"></i></a>                
+                    <a class="action" data-action="latest_branch_commit" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-code-fork" aria-hidden="true"></i></a>                
                 LATEST_COMMIT;
+                $file_actions = ( $this->check_link_files() ) ? '' : $reinstall . $branches . $latest_branch_commit;
+                // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
+                // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
+                // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
+                $module_index_url = url_for( $module['app_path'] . 'index' );
+                $installed_module_info = <<<MODULE_INFO
+                    <span class="installed_modules" name="installed_module_$module_name" id="installed_module_$module_name" data-module="$module_name" data-installed_version="$version" data-source="$source" data-release_url="$release_url" data-private="$private" data-source_token="$token"><a href="$module_index_url">{$module['info']['title']}</a></span>   
+                    <span class="module-version">v$version</span>
+                    $download
+                    $file_actions
+                    <div class="module-description">{$module['info']['description']}</div>
+                MODULE_INFO;
+                $installed_modules .= '
+                    <li>
+                        <div>
+                            ' . $installed_module_info . '
+                        </div>
+                    </li>
+                ';
             }
-            $file_actions = ( $this->check_link_files() ) ? '' : $reinstall . $branches . $latest_branch_commit;
-            // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
-            // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
-            // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
-            $module_index_url = url_for( $module['app_path'] . 'index' );
-            $installed_modules .= '
-                <li>
-                    <div>
-                        <span class="module-name" id="module_' . $module_name . '" data-installed_version="' . $version . '"><a href="' . $module_index_url . '">' . $module['info']['title'] . '</a></span><span class="module-version">v' . $version . '</span>' . $download . $file_actions . '
-                        <div class="module-description">' . $module['info']['description'] . '</div>
-                        ' . $install_info . '
-                    </div>
-                </li>
-            ';
         }
-        // $script = $this->get_source_script();
+        $script = $this->get_source_script();
         $html = <<<HTML
         <h5>Installed Modules</h5>
         <div id="installed_modules">
@@ -977,6 +974,9 @@ class core implements module
                 $installed_modules
             </ul>
         </div>
+        <script>
+            $script
+        </script>
         <style>
             .module-name {
                 display: inline-block;
@@ -1002,7 +1002,7 @@ class core implements module
         $is_link = false;
         $module_name = $this->get_name();
         $is_link_file = PLUGIN_PATH . 'modules/' . $module_name;
-        if ( is_link( $is_link_file ) ) $is_link = true;
+        if ( is_link( $is_link_file ) ) $is_link = false;
         return $is_link;  
     }
 
@@ -1023,6 +1023,73 @@ class core implements module
     }
 
     public function get_source_script()
+    {        
+        $modules = ( $this->get_name() == 'core' ) ? 'let modules = $( `.module-info` )' : 'let modules = $( `#module_test` )';
+        $script = <<<SCRIPT
+        const repos_url = `https://api.github.com/repos/`
+        let modules = $( `.installed_modules` );
+        let get_branches = function( response, module_name, source ) {
+            console.log(response, module_name, source)
+            $.each( response, function( index, branch ) {
+                let branch_name = branch.name
+                let sha = branch.commit.sha
+                let branch_zip_url = 'https://github.com/' + source + '/archive/refs/heads/' + branch_name + '.zip'
+                let commit_url = branch.commit.url
+                $( '#module_branches_' + module_name ).append( '<option value="' + branch_name + '" data-branch_zip_url="' + branch_zip_url + '" data-sha="' + sha + '" data-commit_url="' + commit_url +'">' + branch_name + '</option>' )
+            })    
+        }
+        $.each( modules, function( index, element ) {
+            let module = $( element );
+            let module_name = module.data( 'module' );
+            let source = module.data( 'source' );
+            let url = repos_url + source + "/branches"
+            // console.log(module_name,source,url)
+            if ( module.data( 'source_token' ) !== '' ) {
+                let module_token = module.data( 'source_token' )
+                core.ajax_headers = {'Authorization': 'token ' + module_token}
+            }
+            // console.log(url,core.ajax_headers)
+            let callback = function( response ) {
+                get_branches( response, module_name, source )
+            }
+            core.ajax_get( url, callback )
+        });
+        // let install_versions = $( '.install-info' )
+        // $.each( install_versions, function( index, element ) {
+        //     // console.log(element)
+        //     let container = $( element )
+        //     let module = container.data( 'module' )
+        //     let installed_version = $( '#module_' + module ).data( 'installed_version' )
+        //     // console.log(module,installed_version)
+        //     let get_latest_version = function( response ) {
+        //         // console.log(response)
+        //         let latest_version = response.tag_name.split( 'v' )
+        //         let update = ( installed_version.trim() == latest_version[1] ) ? false : true
+        //         let zip_url = response.zipball_url
+        //         // let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
+        //         // console.log(module,update,latest_version,zip_url,container)
+        //         // if ( update ) container.show().html( link )
+        //         if ( update ) {
+        //             // console.log('update',container)
+        //             container.show().html( 'Install Version ' + latest_version[1] ).attr( 'data-file_url', zip_url )
+        //         }
+        //     }
+        //     let source = $( element ).data( 'source' )    
+        //     let url = `https://api.github.com/repos/` + source + `/releases/latest`
+        //     let private = container.data( 'private' )
+        //     let module_token = container.data( 'token' )
+        //     if ( private && module_token !== undefined ) {
+        //         // console.log('in module token',module_token)
+        //         core.ajax_headers = {'Authorization': 'token ' + module_token}
+        //     }
+        //     // console.log(module,installed_version,source,url)
+        //     core.ajax_get( url, get_latest_version )
+        // })
+        SCRIPT;
+        return $script;
+    }
+
+    public function get_source_script_()
     {        
         $modules = ( $this->get_name() == 'core' ) ? 'let modules = $( `.module-info` )' : 'let modules = $( `#module_test` )';
         $script = <<<SCRIPT
@@ -1095,6 +1162,7 @@ class core implements module
         SCRIPT;
         return $script;
     }
+
     /*
     console.log(modules)
     $.each( modules, function( index, element ) {
