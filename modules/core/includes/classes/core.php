@@ -933,17 +933,18 @@ class core implements module
                 $source = $module['info']['source'];
                 $release_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
                 $token = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? $module['config']['token'] : '';
-                $private = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? 1 : 0;
+                $private = ( isset( $module['info']['private'] ) ) ? 1 : 0;
                 $download = <<<DOWNLOAD
                     <a class="action" data-action="download" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-download"></i></a>
                 DOWNLOAD;
+                $download = ( $private && empty( $token ) ) ? '<span class="install-warning">Module is set to private but no source token has been set</span>' : $download;
                 // $download = ( $module['name'] == 'core' ) ? '' : $download_link;
                 $reinstall = <<<REINSTALL
                     <a class="action" data-action="reinstall" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
                 REINSTALL;
-                $branches = select_tag(  "module_branches_$module_name", array( 0 => '' ), 0, array( 'class' => 'module_branches', 'size' => 'small', 'style' => 'margin-left: 20px;', 'data-source_token' => $token ) );
+                $branches = select_tag( "module_branches_$module_name", array( 0 => '' ), 0, array( 'class' => 'module_branches', 'size' => 'small', 'style' => 'margin-left: 20px;', 'data-source_token' => $token ) );
                 $latest_branch_commit = <<<LATEST_COMMIT
-                    <a class="action" data-action="latest_branch_commit" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-code-fork" aria-hidden="true"></i></a>                
+                    <a class="action" name="latest_branch_$module_name" id="latest_branch_$module_name" data-action="latest_branch_commit" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-code-fork" aria-hidden="true"></i></a>                
                 LATEST_COMMIT;
                 $file_actions = ( $this->check_link_files() ) ? '' : $reinstall . $branches . $latest_branch_commit;
                 // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
@@ -987,8 +988,10 @@ class core implements module
             .module-description {
                 font-size: 1em;
             }
-            .install-info {
+            .install-info, .install-warning {
                 color: red;
+            }
+            .install-info {
                 display: none;
                 cursor: pointer;
             }
@@ -1028,7 +1031,7 @@ class core implements module
         const repos_url = `https://api.github.com/repos/`
         let modules = $( `.installed_modules` );
         let get_branches = function( response, module_name, source ) {
-            console.log(response, module_name, source)
+            console.log(response,module_name,source)
             $.each( response, function( index, branch ) {
                 let branch_name = branch.name
                 let sha = branch.commit.sha
@@ -1041,10 +1044,14 @@ class core implements module
             let module = $( element );
             let module_name = module.data( 'module' );
             let source = module.data( 'source' );
-            let url = repos_url + source + "/branches"
-            // console.log(module_name,source,url)
-            if ( module.data( 'source_token' ) !== '' ) {
-                let module_token = module.data( 'source_token' )
+            let url = repos_url + source + "/branches";
+            let module_token = module.data( 'source_token' );
+            let private = module.data( 'private' );
+            if ( private && module_token == '' ) {
+                $( '#latest_branch_' + module_name ).after( '<span class="install-warning">Module is set to private but no source token has been set</span>' );
+                return;
+            }
+            if ( module_token !== '' ) {
                 core.ajax_headers = {'Authorization': 'token ' + module_token}
             }
             // console.log(url,core.ajax_headers)
@@ -1057,26 +1064,6 @@ class core implements module
         return $script;
     }
 
-    /*
-    console.log(modules)
-    $.each( modules, function( index, element ) {
-        let module = $( element ).data( 'module' )
-        let installed_version = $( element ).data( 'version' )
-        let get_latest_version = function( response ) {
-            // console.log(response.zipball_url)
-            let latest_version = response.tag_name.split( 'v' )
-            let update = ( installed_version.trim() == latest_version[1] ) ? false : true
-            let zip_url = response.zipball_url
-            let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
-            console.log(module,update,latest_version,zip_url,link)
-            if ( update ) ( module == 'core' ) ? $( '#alert_plugin_settings' ).html( link ) : $( `#latest_` + module ).show().html( link )
-        }
-        let source = $( element ).data( 'source' )    
-        let url = `https://api.github.com/repos/` + source + `/releases/latest`
-        // let url = `https://api.github.com/repos/antevasin-app/module-template/releases/latest`
-        core.ajax_get( url, get_latest_version )
-    })
-    */
     public function get_date_string( $date )
     {
         date_default_timezone_set( CFG_APP_TIMEZONE );
