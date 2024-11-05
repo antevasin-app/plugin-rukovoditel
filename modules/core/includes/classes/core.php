@@ -926,7 +926,8 @@ class core implements module
         foreach ( $modules as $module_name => $module )
         {
             // print_rr($module_name);
-            $download = $reinstall = $install_info = '';
+            $set_token = false;
+            $download = $reinstall = '';
             $version = $module['info']['version'];
             if ( isset( $module['info']['source'] ) )
             {
@@ -934,10 +935,11 @@ class core implements module
                 $release_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
                 $token = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? $module['config']['token'] : '';
                 $private = ( isset( $module['info']['private'] ) ) ? 1 : 0;
+                if ( $private && empty( $token ) ) $set_token = true;
                 $download = <<<DOWNLOAD
                     <a class="action" data-action="download" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-download"></i></a>
                 DOWNLOAD;
-                $download = ( $private && empty( $token ) ) ? '<span class="install-warning">Module is set to private but no source token has been set</span>' : $download;
+                $download = ( $set_token ) ? '<span class="install-warning">Module is set to private but no source token has been set</span>' : $download;
                 // $download = ( $module['name'] == 'core' ) ? '' : $download_link;
                 $reinstall = <<<REINSTALL
                     <a class="action" data-action="reinstall" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-refresh" aria-hidden="true"></i></a>
@@ -946,7 +948,15 @@ class core implements module
                 $latest_branch_commit = <<<LATEST_COMMIT
                     <a class="action" name="latest_branch_$module_name" id="latest_branch_$module_name" data-action="latest_branch_commit" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-code-fork" aria-hidden="true"></i></a>                
                 LATEST_COMMIT;
-                $file_actions = ( $this->check_link_files() ) ? '' : $reinstall . $branches . $latest_branch_commit;
+                $file_actions = $download;
+                if ( $set_token )
+                {
+                    $file_actions = '<span class="install-warning">Module is set to private but no source token has been set</span>';
+                }
+                else
+                {
+                    $file_actions .= ( $this->check_link_files() ) ? '' : $reinstall . $branches . $latest_branch_commit;
+                }                 
                 // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
                 // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
                 // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
@@ -954,7 +964,6 @@ class core implements module
                 $installed_module_info = <<<MODULE_INFO
                     <span class="installed_modules" name="installed_module_$module_name" id="installed_module_$module_name" data-module="$module_name" data-installed_version="$version" data-source="$source" data-release_url="$release_url" data-private="$private" data-source_token="$token"><a href="$module_index_url">{$module['info']['title']}</a></span>   
                     <span class="module-version">v$version</span>
-                    $download
                     $file_actions
                     <div class="module-description">{$module['info']['description']}</div>
                 MODULE_INFO;
