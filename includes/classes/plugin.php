@@ -32,7 +32,7 @@ class plugin
     
     private function set_plugin_info()
     {
-        $this->plugin_info = json_decode( file_get_contents( $this->plugin_path . 'plugin.json' ) );
+        $this->plugin_info = json_decode( file_get_contents( $this->plugin_path . '/modules/core/module.json' ) );
         define( 'PLUGIN_VERSION', $this->plugin_info->version );
         define( 'PLUGIN_DESCRIPTION', $this->plugin_info->description );
         define( 'PLUGIN_SOURCE', $this->plugin_info->source );

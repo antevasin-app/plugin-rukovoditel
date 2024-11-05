@@ -1002,7 +1002,7 @@ class core implements module
         $is_link = false;
         $module_name = $this->get_name();
         $is_link_file = PLUGIN_PATH . 'modules/' . $module_name;
-        if ( is_link( $is_link_file ) ) $is_link = false;
+        if ( is_link( $is_link_file ) ) $is_link = true;
         return $is_link;  
     }
 
@@ -1024,7 +1024,6 @@ class core implements module
 
     public function get_source_script()
     {        
-        $modules = ( $this->get_name() == 'core' ) ? 'let modules = $( `.module-info` )' : 'let modules = $( `#module_test` )';
         $script = <<<SCRIPT
         const repos_url = `https://api.github.com/repos/`
         let modules = $( `.installed_modules` );
@@ -1054,111 +1053,6 @@ class core implements module
             }
             core.ajax_get( url, callback )
         });
-        // let install_versions = $( '.install-info' )
-        // $.each( install_versions, function( index, element ) {
-        //     // console.log(element)
-        //     let container = $( element )
-        //     let module = container.data( 'module' )
-        //     let installed_version = $( '#module_' + module ).data( 'installed_version' )
-        //     // console.log(module,installed_version)
-        //     let get_latest_version = function( response ) {
-        //         // console.log(response)
-        //         let latest_version = response.tag_name.split( 'v' )
-        //         let update = ( installed_version.trim() == latest_version[1] ) ? false : true
-        //         let zip_url = response.zipball_url
-        //         // let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
-        //         // console.log(module,update,latest_version,zip_url,container)
-        //         // if ( update ) container.show().html( link )
-        //         if ( update ) {
-        //             // console.log('update',container)
-        //             container.show().html( 'Install Version ' + latest_version[1] ).attr( 'data-file_url', zip_url )
-        //         }
-        //     }
-        //     let source = $( element ).data( 'source' )    
-        //     let url = `https://api.github.com/repos/` + source + `/releases/latest`
-        //     let private = container.data( 'private' )
-        //     let module_token = container.data( 'token' )
-        //     if ( private && module_token !== undefined ) {
-        //         // console.log('in module token',module_token)
-        //         core.ajax_headers = {'Authorization': 'token ' + module_token}
-        //     }
-        //     // console.log(module,installed_version,source,url)
-        //     core.ajax_get( url, get_latest_version )
-        // })
-        SCRIPT;
-        return $script;
-    }
-
-    public function get_source_script_()
-    {        
-        $modules = ( $this->get_name() == 'core' ) ? 'let modules = $( `.module-info` )' : 'let modules = $( `#module_test` )';
-        $script = <<<SCRIPT
-        const repos_url = `https://api.github.com/repos/`
-        let modules = $( `.module-info` )
-        let branch_select = $( '.module_branches' )
-        let branches = {}
-        let source = $( '#source' ).html()
-        let module_token = $( '#module_token' ).val()
-        branch_select.each( function() {
-            // console.log($( 'option', this))
-            let option = $( 'option', this )
-            let branch = option.val()
-            branches[branch] = option
-        })
-        let url = repos_url + source + "/branches"
-        let branch_options = $( '#plugin_branch option' )
-        // console.log(branch_options)
-        let get_branches = function( response ) {
-            $.each( response, function( index, branch ) {
-                let name = branch.name
-                let sha = branch.commit.sha
-                let branch_zip_url = 'https://github.com/' + source + '/archive/refs/heads/' + name + '.zip'
-                let commit_url = branch.commit.url
-                if ( branches[name] !== undefined ) {
-                    // console.log('branch already exists in dropdown',name)
-                    // $( branches[name] ).attr( 'data-sha', sha )
-                    // $( branches[name] ).attr( 'data-commit_url', commit_url )
-                } else {
-                    branch_select.append( '<option value="' + name + '" data-branch_zip_url="' + branch_zip_url + '" data-sha="' + sha + '" data-commit_url="' + commit_url +'">' + name + '</option>' )
-                }
-            })    
-        }
-        if ( module_token !== undefined ) {
-            console.log('in module token',module_token)
-            core.ajax_headers = {'Authorization': 'token ' + module_token}
-        }
-        core.ajax_get( url, get_branches )
-        let install_versions = $( '.install-info' )
-        $.each( install_versions, function( index, element ) {
-            // console.log(element)
-            let container = $( element )
-            let module = container.data( 'module' )
-            let installed_version = $( '#module_' + module ).data( 'installed_version' )
-            // console.log(module,installed_version)
-            let get_latest_version = function( response ) {
-                // console.log(response)
-                let latest_version = response.tag_name.split( 'v' )
-                let update = ( installed_version.trim() == latest_version[1] ) ? false : true
-                let zip_url = response.zipball_url
-                // let link = '<a data-module="' + module + '" data-action="install" data-file_url="' + zip_url + '" data-private="0" class="install-link action" onclick="core.files( this );">Install Version ' + latest_version[1] + '</a>'
-                // console.log(module,update,latest_version,zip_url,container)
-                // if ( update ) container.show().html( link )
-                if ( update ) {
-                    // console.log('update',container)
-                    container.show().html( 'Install Version ' + latest_version[1] ).attr( 'data-file_url', zip_url )
-                }
-            }
-            let source = $( element ).data( 'source' )    
-            let url = `https://api.github.com/repos/` + source + `/releases/latest`
-            let private = container.data( 'private' )
-            let module_token = container.data( 'token' )
-            if ( private && module_token !== undefined ) {
-                // console.log('in module token',module_token)
-                core.ajax_headers = {'Authorization': 'token ' + module_token}
-            }
-            // console.log(module,installed_version,source,url)
-            core.ajax_get( url, get_latest_version )
-        })
         SCRIPT;
         return $script;
     }
