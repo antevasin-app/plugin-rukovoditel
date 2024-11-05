@@ -919,12 +919,12 @@ class core implements module
     public function module_management()
     {
         $modules = get_plugin_modules( PLUGIN_PATH );
-        print_rr($modules);
+        // print_rr($modules);
         // unset( $modules['core'] );
         $installed_modules = '';
         foreach ( $modules as $module_name => $module )
         {
-            print_rr($module_name);
+            // print_rr($module_name);
             $download = $reinstall = $install_info = '';
             $version = $module['info']['version'];
             if ( isset( $module['info']['source'] ) )
