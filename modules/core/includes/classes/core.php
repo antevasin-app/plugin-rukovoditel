@@ -197,17 +197,17 @@ class core implements module
                     )
                 )
             );
-            $sections = array(
-                array(
-                    'title' => 'Module Management',
-                    'content' => $this->module_management()
-                ),                    
-            );
+            // $sections = array(
+            //     array(
+            //         'title' => 'Module Management',
+            //         'content' => $this->module_management()
+            //     ),                    
+            // );
             // array_unshift( $sections, $plugin_settings );
-            $tabs =  array(
-                'name' => 'plugin',
-                'sections' => $sections
-            );
+            // $tabs =  array(
+            //     'name' => 'plugin',
+            //     'sections' => $sections
+            // );
             // $this->set_index_tabs( array( $tabs ) ); 
         }
     }
@@ -919,11 +919,12 @@ class core implements module
     public function module_management()
     {
         $modules = get_plugin_modules( PLUGIN_PATH );
+        print_rr($modules);
         // unset( $modules['core'] );
         $installed_modules = '';
         foreach ( $modules as $module_name => $module )
         {
-            // print_rr($module);
+            print_rr($module_name);
             $download = $reinstall = $install_info = '';
             $version = $module['info']['version'];
             if ( isset( $module['info']['source'] ) )
@@ -953,7 +954,7 @@ class core implements module
                     <a class="action" data-action="latest_branch_commit" $latest_commit_data_attributes onclick="core.files( this )"><i class="fa fa-code-fork" aria-hidden="true"></i></a>                
                 LATEST_COMMIT;
             }
-            $file_actions = ( $this->check_link_files() ) ? $reinstall . $branches . $latest_branch_commit : '';
+            $file_actions = ( $this->check_link_files() ) ? '' : $reinstall . $branches . $latest_branch_commit;
             // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
             // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
             // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
@@ -1000,7 +1001,7 @@ class core implements module
     {
         $is_link = false;
         $module_name = $this->get_name();
-        $is_link_file = PLUGIN_PATH . 'modules/' . $module_name . '/module.json';
+        $is_link_file = PLUGIN_PATH . 'modules/' . $module_name;
         if ( is_link( $is_link_file ) ) $is_link = true;
         return $is_link;  
     }
