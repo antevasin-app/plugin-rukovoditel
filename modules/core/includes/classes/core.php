@@ -1045,7 +1045,8 @@ class core implements module
                 let branch_name = branch.name
                 let sha = branch.commit.sha
                 // let branch_zip_url = 'https://github.com/' + source + '/archive/refs/heads/' + branch_name + '.zip'
-                let branch_zip_url = 'https://codeload.github.com/' + source + '/zip/refs/heads/' + branch_name 
+                // let branch_zip_url = 'https://codeload.github.com/' + source + '/zip/refs/heads/' + branch_name 
+                let branch_zip_url = ( private ) ? 'https://codeload.github.com/' + source + '/zip/refs/heads/' + branch_name : 'https://github.com/' + source + '/archive/refs/heads/' + branch_name + '.zip'
                 let commit_url = branch.commit.url
                 $( '#module_branches_' + module_name ).append( '<option value="' + branch_name + '" data-branch_zip_url="' + branch_zip_url + '" data-sha="' + sha + '" data-commit_url="' + commit_url +'">' + branch_name + '</option>' )
             })    
