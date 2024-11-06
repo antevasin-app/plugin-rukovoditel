@@ -49,16 +49,15 @@ function install( $module )
     curl_setopt( $ch, CURLOPT_URL, $file_url );
     curl_setopt( $ch, CURLOPT_FAILONERROR, true );
     curl_setopt( $ch, CURLOPT_HEADER, 0 );
-    curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, true );
     curl_setopt( $ch, CURLOPT_AUTOREFERER, true );
     curl_setopt( $ch, CURLOPT_BINARYTRANSFER,true );
     curl_setopt( $ch, CURLOPT_TIMEOUT, 10 );
     curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, 0 );
     curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, 0 ); 
+    curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, true );
     curl_setopt( $ch, CURLOPT_FILE, $local_zip_resource );
     curl_setopt( $ch, CURLOPT_USERAGENT, 'Antevasin-App' );
     curl_setopt( $ch, CURLOPT_HTTPHEADER, $headers );
-    curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, 1 );            
     $result = curl_exec($ch);
     if( !$result ) {
         // handle errors
