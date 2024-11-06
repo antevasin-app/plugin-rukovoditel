@@ -288,6 +288,29 @@ var core = core || {
     },    
     ajax_dropdown_trigger:function( fields_obj ) {
         console.log('in ajax_dropdown_trigger',fields_obj);
+        let trigger_field = $( `#fields_${fields_obj.trigger_field_id}` );
+        let status_field_id = fields_obj.status_field_id;
+        let status_field = $( `#fields_${status_field_id}` );
+        trigger_field.on( 'change', function() {
+            switch ( fields_obj.action ) {
+                case 'check':
+                    if ( $( this ).is( ':checked' ) ) {
+                        if ( fields_obj.disable ) {
+                            core['current_status'] = status_field.val();
+                            core.set_ajax_dropdown_value( {field_id:status_field_id,id:fields_obj.status_id,text:fields_obj.status} );
+                            core.disable_ajax_dropdown( status_field_id );
+                        }
+                    } else {
+                        if ( fields_obj.disable ) {
+                            core.enable_ajax_dropdown( status_field_id );
+                            status_field.val( core['current_status'] ).trigger( 'change' );
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        });
     },
     populate_contact_fields:function( fields_obj) {
         let trigger_field_id = fields_obj.trigger_field_id;
