@@ -1039,7 +1039,7 @@ class core implements module
         $script = <<<SCRIPT
         const repos_url = `https://api.github.com/repos/`
         let modules = $( `.installed_modules` );
-        let get_branches = function( response, module_name, source ) {
+        let get_branches = function( response, module_name, private, source ) {
             console.log(response,module_name,source)
             $.each( response, function( index, branch ) {
                 let branch_name = branch.name
@@ -1067,7 +1067,7 @@ class core implements module
             }
             // console.log(url,core.ajax_headers)
             let callback = function( response ) {
-                get_branches( response, module_name, source )
+                get_branches( response, module_name, private, source )
             }
             core.ajax_get( url, callback )
         });
