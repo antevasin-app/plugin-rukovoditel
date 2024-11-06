@@ -285,6 +285,9 @@ var core = core || {
             this.disable_ajax_dropdown( option_obj.field_id );
         }
         field.trigger( 'change' );
+    },    
+    ajax_dropdown_trigger:function( fields_obj ) {
+        console.log('in ajax_dropdown_trigger',fields_obj);
     },
     populate_contact_fields:function( fields_obj) {
         let trigger_field_id = fields_obj.trigger_field_id;
