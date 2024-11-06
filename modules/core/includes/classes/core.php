@@ -849,6 +849,19 @@ class core implements module
         }
     }
 
+    public function get_entity_status_id( $entities_id, $status )
+    {
+        $statuses_entity_id = $this->get_entity_id( 'statuses' );
+        $forms_field_id = $this->get_field_id( $statuses_entity_id, 'forms' );
+        $status_field_id = $this->get_entity_status_field( $entities_id );
+        $sql = "SELECT * FROM app_entity_$statuses_entity_id WHERE field_437 LIKE '%$status%' AND FIND_IN_SET( $entities_id, field_$forms_field_id )";
+        // print_rr($sql);
+        if ( $result = db_fetch_array( db_query( $sql ) ) )
+        {
+            return $result['id'];
+        }
+    }  
+
     public function get_module_info( $path = false )
     {
         $file_path = ( $path ) ? $path : $this->path;
@@ -1636,5 +1649,32 @@ class core implements module
         $markers = json_encode( $data );
         // print_rr($markers);
         echo '{"success":"in core module get_map_markers function","data":' . $markers . '}';
+    }
+
+    public function update_status()
+    {
+        if ( isset( $this->data['items_id'] ) && isset( $this->data['status'] ) )
+        {
+            if ( isset( $this->data['process_id'] ) ) 
+            {
+                $user_query = db_query( "select * from app_ext_processes where id={$this->data['process_id']}" );
+                if ( $process_info = db_fetch_array( $user_query ) )
+                {
+                    $entities_id = $process_info['entities_id'];
+                    $status_field_id = $this->get_entity_status_field( $entities_id );
+                    $status_id = $this->get_entity_status_id( $entities_id, $this->data['status'] );
+                    if ( $status_id > 0 )
+                    {
+                        $sql = "UPDATE app_entity_{$entities_id} SET field_$status_field_id=$status_id WHERE id={$this->data['items_id']}";
+                        // die(print_rr($sql));
+                        db_query( $sql );
+                        //insert choices values for fields with multiple values
+                        $choices_values = new \choices_values( $entities_id );
+                        $choices_values->process( $items_id );                    
+                        \fields_types::update_items_fields( $entities_id, $items_id );
+                    }
+                }
+            }
+        }
     }
 }
