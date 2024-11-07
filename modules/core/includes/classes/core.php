@@ -496,6 +496,72 @@ class core implements module
 
     // module functions
 
+    public function render_tabs()
+    {
+        if ( isset( $this->data['function'] ) && isset( $this->data['class'] ) )
+        {
+            $function = $this->data['function'];
+            $class = $this->data['class'];
+            $class_name = '\Antevasin\\' . $class;
+            $module = ( $class == 'core' ) ? $this : new $class_name();
+            if ( method_exists( $module, $function ) )
+            {
+                $module->$function();  
+            }
+        }
+        
+    }
+
+    public function check_url( $iframe_url )
+    {
+        // check that url will be successful
+        $headers = get_headers( $iframe_url );
+        $headers_info = array();
+        // print_rr($headers);
+        foreach ( $headers as $header )
+        {
+            $header_info = explode( ': ', $header );
+            if ( str_starts_with( $header_info[0], 'HTTP' ) )
+            {
+                $http = explode( ' ', $header_info[0] );
+                $http_ver = explode( '/', $http[0] );
+                $header_info[0] = $http_ver[0];
+                $header_info[1] = array( 
+                    'ver' => $http_ver[1],
+                    'status' => $http[1],
+                    'msg' => $http[2]
+                );
+            }
+            $headers_info[$header_info[0]] = $header_info[1];
+        }
+        // print_rr($iframe_url); print_rr($headers_info);
+        if ( isset( $headers_info['Access-Control-Allow-Origin'] ) && $headers_info['Access-Control-Allow-Origin'] != '*' )
+        {
+            // print_rr('url has CORS access restrictions');
+            $render_issue = true;
+        } 
+        else if ( isset( $headers_info['X-Frame-Options'] ) && ( $headers_info['X-Frame-Options'] == 'DENY' || $headers_info['X-Frame-Options'] == 'SAMEORIGIN' ) )
+        {
+            // print_rr('url has X-Frame-Options restrictions');
+            $render_issue = true;
+        }
+        else 
+        {
+            $render_issue = false;
+        }
+        if ( $render_issue )
+        {
+            // print_rr('url is not going to be rendered in an iframe');   
+            $iframe_url = array( 
+                'url' => $iframe_url,
+                'tooltip' => 'Due to security restrictions this link will open in a new browser tab',
+                'content' => '<div class="iframe-error">Unable to preview document on this page due to security restrictions imposed by the authors of the link - <a href="' . $iframe_url . '" target="_blank">Click here to view document in another browser tab</a></div>',
+            );
+        }
+        // print_rr($iframe_url);
+        return $iframe_url;
+    }
+
     public function get_user_companies()
     {
         // print_rr($this->user_id);

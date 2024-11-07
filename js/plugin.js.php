@@ -21,7 +21,6 @@ var plugin = plugin || {
         console.log(text)   
     },
     on_modal_load:function( form ) {
-        // console.log('on modal load')
         this.form_element = form;
         this.get_form();   
         this.load_modal_form_js();
