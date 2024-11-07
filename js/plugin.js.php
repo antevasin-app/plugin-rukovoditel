@@ -51,7 +51,7 @@ var plugin = plugin || {
                 });
                 break;
             case 'process':
-                js = `process_${entities_id}`
+                js = `process_${this.form['process_id']}`;
                 break;
             case 'items_form':
                 js = `entity_${entities_id}`
@@ -70,7 +70,8 @@ var plugin = plugin || {
     },
     get_form:function() {
         let info = {}
-        let action = this.form_element.prop( 'action' );
+        let action = ( $( '#export-form' ).length > 0 ) ? $( 'form' ).prop( 'action' ) : this.form_element.prop( 'action' );
+        // console.log(this.form_element,action); return;
         this.form = this.get_action_params( action );
         info['element'] = this.form_element;
         info['action'] = action;
@@ -92,7 +93,7 @@ var plugin = plugin || {
         });
     },
     get_action_params:function( url = null ) {
-        let query_string = ( url === null ) ? window.location.search :new URL( url ).search;
+        let query_string = ( url === null ) ? window.location.search : new URL( url ).search;
         let search_params = new URLSearchParams( query_string );
         let module = search_params.get( 'module' );
         let params = {};
@@ -121,7 +122,28 @@ var plugin = plugin || {
                 subtree: true
             });
         });
-    }
+    },
+    wait_until_modal_exists:function( modal_id ) {
+        let selector = `#${modal_id}`;
+        // console.log('wait until modal exists',modal_id,selector)
+        plugin.wait_until_exists( selector ).then( function( element ) {
+            // console.log('wait until exists - modal loaded')
+            $( selector ).on( 'show.bs.modal', function() {
+                // console.log('modal show event')
+                let modal_form = $( selector + ' form' );
+                if ( modal_form.length > 0 ) plugin.on_modal_load( modal_form );
+            });
+            $( '.btn-process-button-dropdown' ).on( 'click', function() {
+                // console.log('actions dropdown clicked')
+                plugin.wait_until_modal_exists( 'ajax-modal' );
+                // $( this ).off( 'click' );
+            })
+            $( selector ).on( 'shown.bs.modal', function() {
+                // console.log('modal shown event')
+                plugin.wait_until_modal_exists( 'ajax-modal' );                
+            });
+        });  
+    },
 }
 
 $( function() {
@@ -134,6 +156,7 @@ $( function() {
             if ( modal_form.length > 0 ) plugin.on_modal_load( modal_form );
         });
     });
+    plugin.wait_until_modal_exists( 'ajax-modal' );
     // wait until entity_items_listing is loaded and then attach event listener for on click event
     plugin.wait_until_exists( '.listing-table-tr' ).then( function( element ) {
         // console.log('default button')

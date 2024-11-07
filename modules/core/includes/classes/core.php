@@ -754,7 +754,8 @@ class core implements module
             }
             // print_rr($sql); print_rr($field_id); print_rr($entities_id); print_rr($heading_field_id); 
             // print_rr($default_field_id);
-            $user_query = db_query( $sql );            
+            $user_query = db_query( $sql );  
+            $items = array();          
             while ( $results = db_fetch_array( $user_query ) )
             {
                 $items[$results['id']] = $results;
@@ -1653,6 +1654,8 @@ class core implements module
 
     public function update_status()
     {
+        global $app_fields_cache;
+
         if ( isset( $this->data['items_id'] ) && isset( $this->data['status'] ) )
         {
             if ( isset( $this->data['process_id'] ) ) 
@@ -1665,13 +1668,19 @@ class core implements module
                     $status_id = $this->get_entity_status_id( $entities_id, $this->data['status'] );
                     if ( $status_id > 0 )
                     {
-                        $sql = "UPDATE app_entity_{$entities_id} SET field_$status_field_id=$status_id WHERE id={$this->data['items_id']}";
+                        $items_id = $this->data['items_id'];
+                        $sql = "UPDATE app_entity_{$entities_id} SET field_$status_field_id=$status_id WHERE id=$items_id";
                         // die(print_rr($sql));
                         db_query( $sql );
                         //insert choices values for fields with multiple values
                         $choices_values = new \choices_values( $entities_id );
-                        $choices_values->process( $items_id );                    
-                        \fields_types::update_items_fields( $entities_id, $items_id );
+                        $options = array(
+                            'class' => $app_fields_cache[$entities_id][$status_field_id]['type'],
+                            'field' => array( 'id' => $status_field_id ),
+                            'value' => ( strlen( $status_id ) ? explode( ',', $status_id ) : '' )
+                        );
+                        $choices_values->prepare( $options );
+                        $choices_values->process( $items_id );   
                     }
                 }
             }

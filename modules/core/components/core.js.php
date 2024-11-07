@@ -200,6 +200,24 @@ var core = core || {
             core.ajax_get( get_default_url, get_default_callback );
         }
     },
+    set_required_fields:function( fields, remove = false ) {
+        // console.log(fields);
+        $.each( fields, function( index, field_id ) {
+            // $( `#fields_${field_id}` ).prop( 'required', true );
+            let label = $( `.form-group-${field_id} label.control-label` );
+            if ( remove ) {
+                $( `#required_${field_id}` ).remove();
+                $( `#fields_${field_id}` ).removeClass( 'required' );  
+            } else {
+                if ( $( `#required_${field_id}` ).length == 0 )
+                {
+                    console.log('adding required label');
+                    label.prepend( `<span class="required-label" id="required_${field_id}">*</span>` );
+                    $( `#fields_${field_id}` ).addClass( 'required' );            
+                }
+            }
+        });
+    },
     set_ajax_field_default:function( field_id, disabled = false ) {
         if ( plugin.form.entities_id ) {
             let url = `${core.url}&action=set_ajax_field_default&entities_id=${plugin.form.entities_id}&field_id=${field_id}`; 
@@ -373,6 +391,18 @@ var core = core || {
     },
     console_response:function( response ) {
         console.log(response);
+    }
+}
+
+var ui = ui || {
+    render_tabs:function( function_name, class_name = 'core' ) {
+        let url = `${core.url}&action=render_tabs&function=${function_name}&class=${class_name}`;
+        console.log('in ui render_tabs function',url);
+        let callback = function( response ) {
+            let tabs_container = $( `#${function_name}` );
+            tabs_container.html( response ).css( 'height', '100vh' );
+        };  
+        core.ajax_get( url, callback );
     }
 }
 
