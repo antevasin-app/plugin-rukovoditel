@@ -423,10 +423,98 @@ class core implements module
                     $form_entities[$entity_id] = $results;
                 }
             }
-            ksort( $form_entities );
             // print_rr($form_entities);
             return $form_entities;
         }
+    }
+
+    public function update_auto_actions()
+    {
+        $auto_actions_entity_id = $this->get_entity_id( 'auto actions' );
+        $status_field_id = 982;
+        if ( $auto_actions_entity_id > 0 )
+        {
+            $auto_actions_query = db_fetch_all( "app_entity_$auto_actions_entity_id" );
+            $auto_actions = array();
+            while ( $results = db_fetch_array( $auto_actions_query ) )
+            {
+                $auto_action = array(
+                    'process_id' => $results['id'],
+                    'entity_name' => $results['field_977'],
+                    'process_name' => $results['field_978'],
+                    'button_title' => $results['field_979'],
+                    'is_active' => ( $results['field_982'] == 2 ) ? 0 : $results['field_982']
+                );
+                $auto_actions[$results['id']] = $auto_action;
+            }
+            // print_rr($auto_actions);
+            $sql = "
+                SELECT processes.id AS process_id, entities.name AS entity_name, processes.name AS process_name, processes.button_title AS button_title, processes.is_active AS is_active 
+                FROM app_ext_processes AS processes
+                INNER JOIN app_entities AS entities
+                ON entities.id=processes.entities_id;
+            ";
+            $user_query = db_query( $sql );
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                // print_rr('process'); print_rr($results);
+                $now = time();
+                $process_id = $results['process_id'];
+                if ( isset( $auto_actions[$process_id] ) )
+                {
+                    // print_rr("process - is_active is {$results['is_active']}"); print_rr("auto action is {$auto_actions[$process_id]['field_982']}");
+                    // if ( $auto_actions[$process_id]['field_982'] == 2 ) $auto_actions[$process_id]['field_982'] = 0;
+                    $diffs = array_diff( $results, $auto_actions[$process_id] );
+                    // print_rr($diffs);
+                    if ( !empty( $diffs ) )
+                    {
+                        // print_rr("there are changes to update in auto actions with id $process_id");
+                        $title = ( empty( $results['button_title'] ) ) ? $results['process_name'] : $results['button_title'];
+                        $status_id = ( $results['is_active'] ) ? 1 : 2;
+                        $sql = "
+                            UPDATE `app_entity_$auto_actions_entity_id`
+                            SET `date_updated`=$now, `field_977`='{$results['entity_name']}', `field_978`='{$results['process_name']}', `field_979`='{$results['button_title']}', `field_981`='$title', `field_982`=$status_id
+                            WHERE `id`=$process_id
+                        ";
+                        print_rr($sql);
+                        db_query( $sql );
+                    }
+                }
+                else
+                {
+                    // print_rr("add item to auto actions with id $process_id");
+                    $title = ( empty( $results['button_title'] ) ) ? $results['process_name'] : $results['button_title'];
+                    $status_id = ( $results['is_active'] ) ? 1 : 2;
+                    $sql = "
+                        INSERT INTO `app_entity_$auto_actions_entity_id`
+                        ( `id`, `parent_id`, `parent_item_id`, `linked_id`, `date_added`, `date_updated`, `created_by`, `sort_order`, `field_977`, `field_978`, `field_979`, `field_981`, `field_982` ) 
+                        VALUES 
+                        ( $process_id, 0, 0, 0, $now, 0, 1, 0, '{$results['entity_name']}', '{$results['process_name']}', '{$results['button_title']}', '$title', $status_id )
+                    ";
+                    print_rr($sql);
+                    db_query( $sql );
+                }
+                if ( isset( $status_id ) )
+                {
+                    $this->choices_values( $auto_actions_entity_id, $process_id, $status_field_id, $status_id );
+                }
+            }
+        }
+    }
+
+    protected function choices_values( $entities_id, $items_id, $field_id, $value )
+    {
+        //insert choices values for fields with multiple values
+        global $app_fields_cache;
+
+        $choices_values = new \choices_values( $entities_id );
+        $options = array(
+            'class' => $app_fields_cache[$entities_id][$field_id]['type'],
+            'field' => array( 'id' => $field_id ),
+            'value' => ( strlen( $value ) ? explode( ',', $value ) : '' )
+        );
+        $choices_values->prepare( $options );
+        $choices_values->process( $items_id );
     }
 
     public function update_entities()
@@ -669,6 +757,7 @@ class core implements module
     public function select2_statuses_filter()
     {
         global $app_action;
+
         // print_rr($this->data); print_rr($app_action);
         switch ( $app_action )
         {
@@ -689,13 +778,13 @@ class core implements module
         $forms_field_id = $this->get_field_id( $filter_entity_id, 'forms' );
         $system_status_field_id = $this->get_field_id( $filter_entity_id, 'system status' );
         $sql = "SELECT * FROM app_entity_$filter_entity_id WHERE FIND_IN_SET( $forms_entity_id, field_$forms_field_id ) AND field_$system_status_field_id='true'";
-        // print_rr($sql);  
+        print_rr($sql);  
         $user_query = db_query( $sql );
         while ( $results = db_fetch_array( $user_query ) )
         {
             $this->items[$results['id']] = $results;
         }
-        usort( $this->items, function ( $a, $b ) use ( $heading_field_id )
+        uasort( $this->items, function ( $a, $b ) use ( $heading_field_id )
         {
             return strcmp( $a["field_$heading_field_id"], $b["field_$heading_field_id"] );
         });
@@ -1738,15 +1827,7 @@ class core implements module
                         $sql = "UPDATE app_entity_{$entities_id} SET field_$status_field_id=$status_id WHERE id=$items_id";
                         // die(print_rr($sql));
                         db_query( $sql );
-                        //insert choices values for fields with multiple values
-                        $choices_values = new \choices_values( $entities_id );
-                        $options = array(
-                            'class' => $app_fields_cache[$entities_id][$status_field_id]['type'],
-                            'field' => array( 'id' => $status_field_id ),
-                            'value' => ( strlen( $status_id ) ? explode( ',', $status_id ) : '' )
-                        );
-                        $choices_values->prepare( $options );
-                        $choices_values->process( $items_id );   
+                        $this->choices_values( $entities_id, $items_id, $status_field_id, $status_id );
                     }
                 }
             }
