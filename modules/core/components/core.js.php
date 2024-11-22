@@ -166,14 +166,14 @@ var core = core || {
         // return false;
     },
     filter_status_field:function() {
-        console.log('in filter_status_field function',plugin.form); 
+        // console.log('in filter_status_field function',plugin.form); 
         // console.trace();
         if ( plugin.form.entities_id ) {
             // let url = `${core.url}&action=filter_status_field&entities_id=${plugin.form.entities_id}`;
             let get_default_url = `${core.url}&action=filter_statuses&get_default=true&entities_id=${plugin.form.entities_id}`;
             // console.log(get_default_url);
             let get_default_callback = function( response ) {
-                console.log('in get_default_callback function',response);
+                // console.log('in get_default_callback function',response);
                 if ( response != '' ) {
                     let response_obj = JSON.parse( response );
                     // console.log(response_obj);
@@ -182,29 +182,15 @@ var core = core || {
                         $( `#btn_submodal_edit_item_${field_id}` ).hide()
                         let status_field = $( `#fields_${field_id}` );
                         status_field.on( 'select2:select', function ( e ) {
-                            var data = e.params.data;
-                            if ( data.system ) {
-                                // console.log(this);
-                                $( `#btn_submodal_edit_item_${field_id}` ).hide()
-                            } else {
-                                $( `#btn_submodal_edit_item_${field_id}` ).show()
-                            }
+                            core.get_status_field_value_info( field_id );
                         });
                         if ( status_field.val() === null ) {
                             // console.log('status field has no value');
                             $.each( response_obj.default, function( index, option_obj ) {
-                                // console.log('option object is',option_obj);
-                                core.set_ajax_dropdown_value( option_obj );
-                                if ( option_obj.system ) {
-                                    // console.log(this);
-                                    $( `#btn_submodal_edit_item_${option_obj.field_id}` ).hide()
-                                } else {
-                                    $( `#btn_submodal_edit_item_${option_obj.field_id}` ).show()
-                                }
+                                core.set_ajax_dropdown_value( option_obj );                                
                             });
                         } else {
-                            console.log('status field already has a value',field_id,status_field,'status field value',status_field.val());
-                            // look up the status field value and see if it is a system status
+                            // console.log('status field already has a value',field_id,status_field,'status field value',status_field.val());
                             core.get_status_field_value_info( field_id );
                         }
                         let ajax_dropdown_callback = function( response ) {
@@ -220,21 +206,23 @@ var core = core || {
             core.ajax_get( get_default_url, get_default_callback );
         }
     },
+    sub_modal_visibility:function( field_id, system ) {
+        if ( system ) {
+            $( `#btn_submodal_edit_item_${field_id}` ).hide()
+        } else {
+            $( `#btn_submodal_edit_item_${field_id}` ).show()
+        }        
+    },
     get_status_field_value_info:function( field_id ) {
-        console.log('in get_status_field_value_info',field_id);
+        // console.log('in get_status_field_value_info',field_id);
+        // look up the status field value and see if it is a system status
         let status_field = $( `#fields_${field_id}` );
         let url = `${core.url}&action=get_status_field_value_info&status_id=${status_field.val()}`;
         let callback = function( response ) {
-            console.log('in callback function',response);
+            // console.log('in callback function',response);
             if ( response != '' ) {
                 let response_obj = JSON.parse( response );
-                console.log(response_obj);
-                let data = response_obj.data;
-                if ( data.system ) {
-                    $( `#btn_submodal_edit_item_${field_id}` ).hide()
-                } else {
-                    $( `#btn_submodal_edit_item_${field_id}` ).show()
-                }
+                core.sub_modal_visibility( field_id, response_obj.data.system );
             }
         }
         core.ajax_get( url, callback );

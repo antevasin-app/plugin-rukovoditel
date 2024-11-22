@@ -1087,7 +1087,7 @@ class core implements module
             $get_default = ( isset( $this->data['get_default'] ) && $this->data['get_default'] ) ? true : false;
             // get system statuses for the filter entity
             $sql = "SELECT * FROM app_entity_$statuses_entity_id WHERE FIND_IN_SET( $filter_entity_id, field_$statuses_forms_field_id ) AND field_$statuses_system_field_id='true'";
-            $options = array();
+            $options = $defaults = array();
             $user_query = db_query( $sql );
             while ( $results = db_fetch_array( $user_query ) )
             {
@@ -1100,10 +1100,18 @@ class core implements module
                 if ( !in_array( $filter_entity_id, explode( ',', $status["field_$statuses_forms_field_id"] ) ) ) continue;
                 $heading_value = \items::get_heading_field_value( $status_heading_field_id, $status );
                 $option = array( 'id' => $status_id, 'text' => $heading_value );
-                if ( $get_default && $status["field_$statuses_default_field_id"] ) $option['field_id'] = $filter_status_field_id;
-                $options[] = $option;
+                if ( $get_default && $status["field_$statuses_default_field_id"] == 'true' ) 
+                {
+                    $option['field_id'] = $filter_status_field_id;
+                    $defaults[] = $option;
+                }
+                else
+                {
+                    $options[] = $option;
+                }
             }
-            $response = ( $get_default ) ? array( 'field_id' => $filter_status_field_id, 'default' => $options ) : array( 'results' => $options );
+            // print_rr($options); print_rr($defaults);
+            $response = ( $get_default ) ? array( 'field_id' => $filter_status_field_id, 'default' => $defaults ) : array( 'results' => $options );
             echo json_encode( $response );            
         }
     }
