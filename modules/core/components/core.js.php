@@ -132,17 +132,21 @@ var core = core || {
         var file_url = module_info.data( 'release_url' );
         let private = module_info.data( 'private' );
         var source_token = module_info.data( 'source_token' );
-        if ( action == 'latest_branch_commit' ) {
-            file_url = $( `#module_branches_${module}` ).find( ':selected' ).data( 'branch_zip_url' );
-            source_token = $( `#module_branches_${module}` ).data( 'source_token' );
-        }
-        console.log(file_url,source_token);
         let data = {
             module_name: module,
             file_url: file_url,
             private: private,
             source_token: source_token
         }
+        if ( action == 'latest_branch_commit' ) {
+            let selected_branch = $( `#module_branches_${module}` ).find( ':selected' );
+            let branch = selected_branch.val();
+            let commit_sha = selected_branch.data( 'commit_sha' );
+            let commit_url = selected_branch.data( 'commit_url' );
+            file_url = selected_branch.data( 'branch_zip_url' ) + `&branch=${branch}&commit_sha=${commit_sha}&commit_url=${commit_url}`;
+            source_token = $( `#module_branches_${module}` ).data( 'source_token' );
+        }
+        // console.log(file_url,source_token);        
         if ( action == 'download' ) {
             let callback = function( response ) {
                 if ( response != '') {
@@ -160,10 +164,15 @@ var core = core || {
             core.ajax_post( url, data, callback );
         } else {
             let url = `${core.files_url}&module_action=${action}&module_name=${module}&file_url=${file_url}&private=${private}`;
-            console.log(element,action,module,core.files_url,file_url,url,private);
+            // console.log(element,action,module,core.files_url,file_url,url,private);
             open_dialog( url );
         }
         // return false;
+    },
+    format_date_string:function( date_string ) {
+        let date = new Date( date_string );
+        let options = { year: 'numeric', day: '2-digit', month: '2-digit', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZone: '<?php echo CFG_APP_TIMEZONE ?>' };
+        return date.toLocaleDateString( 'en-US', options );
     },
     filter_status_field:function() {
         // console.log('in filter_status_field function',plugin.form); 

@@ -21,6 +21,8 @@ if ( !empty( $app_module_action ) )
 
 function install( $module )
 {
+    global $app_module_action;
+
     $data = $module->get_data();
     $action = $data['action'];
     $module_name = $data['module_name'];
@@ -113,6 +115,24 @@ function install( $module )
             $install_zip->extractTo( $install_dir );
         }
         $install_zip->close();
+        if ( $app_module_action == 'latest_branch_commit' )
+        {
+            $config = array();
+            if ( isset( $data['branch'] ) )
+            {
+                $config['branch'] = $data['branch'];
+                if ( isset( $data['commit_sha'] ) && isset( $data['commit_url'] ) )
+                {
+                    $commit = array( 
+                        'sha' => $data['commit_sha'],
+                        'url' => $data['commit_url']
+                    );
+                    if ( isset( $data['commit_date'] ) ) $commit['date'] = $data['commit_date'];
+                    $config['commit'] = $commit;
+                }
+            }
+            $module->update_module_config( array( 'module' => $module_name, 'config' => array( 'source' => $config ) ) );
+        }
         // print_rr($local_zip_file); print_rr($source_path); print_rr($unzipped_dir); print_rr($dir_to_zip); print_rr($zip); die(print_rr($new_zip_filename));        
         redirect_to( $data['redirect_to'] );
     }

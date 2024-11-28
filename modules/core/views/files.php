@@ -30,6 +30,10 @@ echo input_hidden_tag( 'redirect_to', 'antevasin/core/index' );
 echo input_hidden_tag( 'module_name', $module_name );
 echo input_hidden_tag( 'file_url', $data['file_url'] );
 echo input_hidden_tag( 'private', $data['private'] );
+if ( isset( $data['branch'] ) ) echo input_hidden_tag( 'branch', $data['branch'] );
+if ( isset( $data['commit_sha'] ) ) echo input_hidden_tag( 'commit_sha', $data['commit_sha'] );
+if ( isset( $data['commit_date'] ) ) echo input_hidden_tag( 'commit_date', $data['commit_date'] );
+if ( isset( $data['commit_url'] ) ) echo input_hidden_tag( 'commit_url', $data['commit_url'] );
 $title = ucwords( $module_name );
 if ( $module_name == 'core' )
 {
