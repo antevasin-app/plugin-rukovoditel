@@ -1588,19 +1588,29 @@ class core implements module
             // console.log(url,core.ajax_headers)
             let callback = function( response ) {
                 get_branches( response, module_name, private, source );
-                $( '.module_branches' ).on( 'change', function() {
+                $( '#module_branches_' + module_name ).on( 'change', function() {
+                    let branch_install_ele = $( `#latest_branch_` + module_name );
+                    $( '.install-msg' ).remove();
                     let selected_branch = $( this ).find( ':selected' )
                     let module = selected_branch.data( 'module' )
                     let branch = selected_branch.val()
+                    let branch_commit_sha = selected_branch.data( 'commit_sha' )
                     let branch_commit_date = selected_branch.data( 'commit_date' )
+                    let branch_commit_url = selected_branch.data( 'commit_url' )
                     let commit_info = $( `#` + module + `_module_commit_info` )
                     let installed_branch = $( `#` + module + `_module_branch_info` ).data( 'module' )
                     let installed_commit_date = commit_info.data( 'commit_date' )
                     if ( branch == installed_branch ) {
-                        if ( branch_commit_date != installed_commit_date ) {
-                            console.log('selected branch and installed branch are the same but commit dates do not match',module,branch,branch_commit_date,installed_branch,installed_commit_date)
+                        if ( branch_commit_date == installed_commit_date ) {
+                            message = 'Currently installed branch and commit are the same as remote branch';
+                        } else {
+                            message = 'Currently installed branch will be overwritten with commit <a href="' + branch_commit_url + '">' + branch_commit_sha + '</a> dated ' + core.format_date_string( branch_commit_date );
                         }        
+                        branch_install_ele.after( '<div class="install-msg">' + message + '</div>' );
+                        console.log(message)   
+                        // console.log(module,branch,branch_commit_date,installed_branch,installed_commit_date)
                     }
+                    
                 })
             }
             core.ajax_get( url, callback )
