@@ -131,7 +131,7 @@ function install( $module )
                     $config['commit'] = $commit;
                 }
             }
-            $module->update_module_config( array( 'module' => $module_name, 'config' => array( 'source' => $config ) ) );
+            $module->update_module_config( array( 'source' => $config ) );
         }
         // print_rr($local_zip_file); print_rr($source_path); print_rr($unzipped_dir); print_rr($dir_to_zip); print_rr($zip); die(print_rr($new_zip_filename));        
         redirect_to( $data['redirect_to'] );

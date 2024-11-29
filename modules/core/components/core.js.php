@@ -142,8 +142,9 @@ var core = core || {
             let selected_branch = $( `#module_branches_${module}` ).find( ':selected' );
             let branch = selected_branch.val();
             let commit_sha = selected_branch.data( 'commit_sha' );
+            let commit_date = selected_branch.data( 'commit_date' );
             let commit_url = selected_branch.data( 'commit_url' );
-            file_url = selected_branch.data( 'branch_zip_url' ) + `&branch=${branch}&commit_sha=${commit_sha}&commit_url=${commit_url}`;
+            file_url = selected_branch.data( 'branch_zip_url' ) + `&branch=${branch}&commit_sha=${commit_sha}&commit_date=${commit_date}&commit_url=${commit_url}`;
             source_token = $( `#module_branches_${module}` ).data( 'source_token' );
         }
         // console.log(file_url,source_token);        

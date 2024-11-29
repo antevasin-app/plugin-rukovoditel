@@ -1426,8 +1426,8 @@ class core implements module
                 // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
                 // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
                 $module_index_url = url_for( $module['app_path'] . 'index' );
-                $installed_branch = ( isset( $module['config']['source']['branch'] ) ) ? '<div class="branch-info" id="branch_info_$module_name">Branch Installed: ' . $module['config']['source']['branch'] . '</div>' : '';                
-                $commit_info = ( isset( $module['config']['source']['commit']['sha'] ) && ( isset( $module['config']['source']['commit']['date'] ) && isset( $module['config']['source']['commit']['url'] ) ) ) ? '<div><span>Date: ' . $this->format_date_string( $module['config']['source']['commit']['date'] ) . '</span> <span>Commit: <a href="' . $module['config']['source']['commit']['url'] . '">' . $module['config']['source']['commit']['sha'] . '</a></span></div>' : '';
+                $installed_branch = ( isset( $module['config']['source']['branch'] ) ) ? '<div id="' . $module_name . '_module_branch_info" data-module="' . $module['config']['source']['branch'] . '">Branch Installed: ' . $module['config']['source']['branch'] . '</div>' : '';                
+                $commit_info = ( isset( $module['config']['source']['commit']['sha'] ) && ( isset( $module['config']['source']['commit']['date'] ) && isset( $module['config']['source']['commit']['url'] ) ) ) ? '<div id="' . $module_name . '_module_commit_info" data-commit_date="' . $module['config']['source']['commit']['date'] . '"><span>Date: <a class="commit-date">' . $this->format_date_string( $module['config']['source']['commit']['date'] ) . '</a></span> <span>Commit: <a href="' . $module['config']['source']['commit']['url'] . '">' . $module['config']['source']['commit']['sha'] . '</a></span></div>' : '';
                 $installed_module_info = <<<MODULE_INFO
                     <span class="installed_modules" name="installed_module_$module_name" id="installed_module_$module_name" data-module="$module_name" data-installed_version="$version" data-source="$source" data-release_url="$release_url" data-private="$private" data-source_token="$token"><a href="$module_index_url">{$module['info']['title']}</a></span>   
                     <span class="module-version">v$version</span>
@@ -1472,6 +1472,9 @@ class core implements module
             .install-info {
                 display: none;
                 cursor: pointer;
+            }
+            .commit-date {
+                text-decoration: none !important;
             }
         </style>
         HTML;        
@@ -1521,12 +1524,11 @@ class core implements module
                 let branch_commit_callback = function( response ) {
                     // let commit_date = core.format_date_string( response.commit.author.date );
                     let commit_date = response.commit.author.date;
-                    console.log(commit_date)
                     let sha = branch.commit.sha;
                     // let branch_zip_url = 'https://github.com/' + source + '/archive/refs/heads/' + branch_name + '.zip'
                     let branch_zip_url = 'https://codeload.github.com/' + source + '/zip/refs/heads/' + branch_name;
                     let commit_url = branch.commit.url;
-                    $( '#module_branches_' + module_name ).append( '<option value="' + branch_name + '" data-branch_zip_url="' + branch_zip_url + '" data-commit_sha="' + sha + '" data-commit_date="' + commit_date + '" data-commit_url="' + commit_url +'">' + branch_name + '</option>' );
+                    $( '#module_branches_' + module_name ).append( '<option value="' + branch_name + '" data-module="' + module_name + '" data-branch_zip_url="' + branch_zip_url + '" data-commit_sha="' + sha + '" data-commit_date="' + commit_date + '" data-commit_url="' + commit_url +'">' + branch_name + '</option>' );
                 }
                 let branch_commit_url = repos_url + source + '/commits/' + branch_name
                 core.ajax_get( branch_commit_url, branch_commit_callback )
@@ -1548,7 +1550,21 @@ class core implements module
             }
             // console.log(url,core.ajax_headers)
             let callback = function( response ) {
-                get_branches( response, module_name, private, source )
+                get_branches( response, module_name, private, source );
+                $( '.module_branches' ).on( 'change', function() {
+                    let selected_branch = $( this ).find( ':selected' )
+                    let module = selected_branch.data( 'module' )
+                    let branch = selected_branch.val()
+                    let branch_commit_date = selected_branch.data( 'commit_date' )
+                    let commit_info = $( `#` + module + `_module_commit_info` )
+                    let installed_branch = $( `#` + module + `_module_branch_info` ).data( 'module' )
+                    let installed_commit_date = commit_info.data( 'commit_date' )
+                    if ( branch == installed_branch ) {
+                        if ( branch_commit_date != installed_commit_date ) {
+                            console.log('selected branch and installed branch are the same but commit dates do not match',module,branch,branch_commit_date,installed_branch,installed_commit_date)
+                        }        
+                    }
+                })
             }
             core.ajax_get( url, callback )
         });
