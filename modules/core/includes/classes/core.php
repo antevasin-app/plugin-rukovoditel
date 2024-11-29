@@ -429,6 +429,43 @@ class core implements module
         }
     }
 
+    public function update_module_config( $config ) 
+    {
+        $module_name = strtoupper( $this->get_name() );
+        $configuration_name = "CFG_MODULE_{$module_name}_CONFIG";
+        $sql = "SELECT * FROM app_configuration WHERE configuration_name='$configuration_name'";
+        if ( $result = db_fetch_array( db_query( $sql ) ) )
+        {
+            $existing_config = json_decode( $result['configuration_value'], true );
+            foreach ( $config as $config_key => $config )
+            {
+                if ( isset( $existing_config[$config_key] ) )
+                {
+                    // print_rr($config_key); print_rr($config);
+                    foreach ( $config as $key => $value )
+                    {
+                        if ( is_array( $value ) )
+                        {
+                            // print_rr($value);
+                            $existing_value = $existing_config[$config_key][$key];
+                            $updated_value = array_merge( $existing_value, $value );
+                            // print_rr($updated_value);
+                            $existing_config[$config_key][$key] = $updated_value;   
+                        }
+                        else
+                        {
+                            $existing_config[$config_key][$key] = $value;
+                        }
+                    }
+                }
+            }
+            $sql = "UPDATE app_configuration SET configuration_value='" . json_encode( $existing_config ) . "' WHERE configuration_name='$configuration_name'";
+            db_query( $sql );
+            // print_rr($sql);
+            // print_rr($existing_config);
+        }
+    }
+    
     public function update_auto_actions()
     {
         $auto_actions_entity_id = $this->get_entity_id( 'auto actions' );
