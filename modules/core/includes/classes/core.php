@@ -1463,8 +1463,8 @@ class core implements module
                 // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
                 // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
                 $module_index_url = url_for( $module['app_path'] . 'index' );
-                $installed_branch = ( isset( $module['config']['source']['branch'] ) ) ? '<div id="' . $module_name . '_module_branch_info" data-module="' . $module['config']['source']['branch'] . '">Branch Installed: ' . $module['config']['source']['branch'] . '</div>' : '';                
-                $commit_info = ( isset( $module['config']['source']['commit']['sha'] ) && ( isset( $module['config']['source']['commit']['date'] ) && isset( $module['config']['source']['commit']['url'] ) ) ) ? '<div id="' . $module_name . '_module_commit_info" data-commit_date="' . $module['config']['source']['commit']['date'] . '"><span>Date: <a class="commit-date">' . $this->format_date_string( $module['config']['source']['commit']['date'] ) . '</a></span> <span>Commit: <a href="' . $module['config']['source']['commit']['url'] . '">' . $module['config']['source']['commit']['sha'] . '</a></span></div>' : '';
+                $installed_branch = ( isset( $module['config']['source']['branch'] ) ) ? '<div id="' . $module_name . '_module_branch_info" data-module="' . $module['config']['source']['branch'] . '">Branch Installed: <a class="branch-info-highlight">' . $module['config']['source']['branch'] . '</a></div>' : '';                
+                $commit_info = ( isset( $module['config']['source']['commit']['sha'] ) && ( isset( $module['config']['source']['commit']['date'] ) && isset( $module['config']['source']['commit']['url'] ) ) ) ? '<div id="' . $module_name . '_module_commit_info" data-commit_date="' . $module['config']['source']['commit']['date'] . '"><span>Date: <a class="branch-info-highlight">' . $this->format_date_string( $module['config']['source']['commit']['date'] ) . '</a></span> <span>Commit: <a href="' . $module['config']['source']['commit']['url'] . '">' . $module['config']['source']['commit']['sha'] . '</a></span></div>' : '';
                 $installed_module_info = <<<MODULE_INFO
                     <span class="installed_modules" name="installed_module_$module_name" id="installed_module_$module_name" data-module="$module_name" data-installed_version="$version" data-source="$source" data-release_url="$release_url" data-private="$private" data-source_token="$token"><a href="$module_index_url">{$module['info']['title']}</a></span>   
                     <span class="module-version">v$version</span>
@@ -1510,7 +1510,7 @@ class core implements module
                 display: none;
                 cursor: pointer;
             }
-            .commit-date {
+            .branch-info-highlight {
                 text-decoration: none !important;
             }
         </style>
