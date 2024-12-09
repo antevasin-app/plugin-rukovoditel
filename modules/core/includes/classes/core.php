@@ -801,7 +801,7 @@ class core implements module
             }
             if ( !empty( $user_companies ) )
             {
-                // print_rr($user_companies);
+                // print_rr("entities id is $entities_id - user company ids are $user_companies");
                 $sql = "
                     SELECT e.* 
                     FROM app_entity_{$entities_id} AS e
@@ -959,13 +959,18 @@ class core implements module
                             $this->data['field_entity_id'] = $field_entity_id;
                             $this->data['filter_entity_id'] = $params['id'];
                             $this->data['filter_field_id'] = $this->get_field_id( $field_entity_id, 'actions' );
-                            echo $this->get_select2_options();
                         }
                     }
+                    break;
+                case 'items/form':
+                    // print_rr('items/form form_type in core module dialog_filter function');
+                    // print_rr($this->data);
+                    $this->data['field_entity_id'] = $this->data['entity_id'];
                     break;
                 default:
                     break;  
             }
+            echo $this->get_select2_options();
         } 
     }
 
