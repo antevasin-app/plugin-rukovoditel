@@ -1327,64 +1327,68 @@ class core implements module
 
     private function get_module_config()
     {
+        $default_icon = 'fa-cog';
+        $proposed_config = array(
+            'module' => $this->name,
+            'notes' => '',
+            'source' => array(
+                'branch' => '',
+                'commit' => array(
+                    'sha' => '',
+                    'date' => '',
+                    'url' => ''
+                )
+            ),
+            'token' => '',
+            'token_expiry' => '',
+            'access' => array(
+                'admin' => array(
+                    'groups' => '',
+                    'users' => ''
+                ),
+                'syatem_admin' => array(
+                    'groups' => '',
+                    'users' => ''
+                ),
+                'user' => array(
+                    'groups' => '',
+                    'users' => ''
+                )
+            ),
+            'menus' => array(
+                'all_menus' => 0,
+                'icon' => $default_icon,
+                'sidebar' => array(
+                    'show' => 1,
+                    'icon' => $default_icon,
+                    'link_text' => $this->get_name( 'ucfirst' ),
+                    'link_url' => $this->app_path . 'index',
+                ),
+                'header' => array(
+                    'show' => 0,
+                    'icon' => $default_icon,
+                    'link_text' => $this->get_name( 'ucfirst' ),
+                    'link_url' => $this->app_path . 'index',
+                ),
+                'user' => array(
+                    'show' => 0,
+                    'icon' => $default_icon,
+                    'link_text' => $this->get_name( 'ucfirst' ),
+                    'link_url' => $this->app_path . 'index',
+                )
+            )
+        );
         $this->cfg = 'CFG_MODULE_' . strtoupper( $this->name ) . '_CONFIG';
         if ( defined( $this->cfg ) )
         {
-            return json_decode( constant( $this->cfg ) );
+            $existing_config = json_decode( constant( $this->cfg ), true );
+            // compare existing config with proposed config to pick up any new configuration
+            $updated_config = array_replace_recursive( $existing_config, $this->array_diff_recursive( $proposed_config, $existing_config ) );
+            return $updated_config;
         }
         else
         {
-            $default_icon = 'fa-cog';
-            $this->config = array(
-                'module' => $this->name,
-                'notes' => '',
-                'source' => array(
-                    'branch' => '',
-                    'commit' => array(
-                        'sha' => '',
-                        'date' => '',
-                        'url' => ''
-                    )
-                ),
-                'token' => '',
-                'token_expiry' => '',
-                'access' => array(
-                    'admin' => array(
-                        'groups' => '',
-                        'users' => ''
-                    ),
-                    'syatem_admin' => array(
-                        'groups' => '',
-                        'users' => ''
-                    ),
-                    'user' => array(
-                        'groups' => '',
-                        'users' => ''
-                    )
-                ),
-                'menus' => array(
-                    'all_menus' => 0,
-                    'icon' => $default_icon,
-                    'sidebar' => array(
-                        'show' => 1,
-                        'icon' => $default_icon,
-                        'link_text' => $this->get_name( 'ucfirst' ),
-                        'link_url' => $this->app_path . 'index',
-                    ),
-                    'header' => array(
-                        'show' => 0,
-                        'icon' => $default_icon,
-                        'link_text' => $this->get_name( 'ucfirst' ),
-                        'link_url' => $this->app_path . 'index',
-                    ),
-                    'user' => array(
-                        'show' => 0,
-                        'icon' => $default_icon,
-                        'link_text' => $this->get_name( 'ucfirst' ),
-                        'link_url' => $this->app_path . 'index',
-                    )
-                )
-            );
+            $this->config = $proposed_config;
             $this->set_module_config();
         }
     }
@@ -1410,6 +1414,34 @@ class core implements module
         \configuration::set( $this->cfg, json_encode( $this->config ) );      
     }
 
+    public function array_diff_recursive( $array1, $array2 ) 
+    {
+        $diff = array();
+        foreach ( $array1 as $key => $value ) 
+        {
+            if ( is_array( $value ) ) 
+            {
+                if ( !isset( $array2[$key] ) || !is_array( $array2[$key] ) ) 
+                {
+                    $diff[$key] = $value;
+                } 
+                else 
+                {
+                    $new_diff = $this->array_diff_recursive( $value, $array2[$key] );
+                    if ( !empty( $new_diff ) )  
+                    {
+                        $diff[$key] = $new_diff;
+                    }
+                }
+            } 
+            else if ( !array_key_exists( $key, $array2 ) || $array2[$key] !== $value ) 
+            {
+                $diff[$key] = $value;
+            }
+        }
+        return $diff;
+    }
+    
     public function module_management()
     {
         $modules = get_plugin_modules( PLUGIN_PATH );
