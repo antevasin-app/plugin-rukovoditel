@@ -130,7 +130,19 @@ class plugin
     {
         return $this->core_path;
     }
-    
+ 
+    public function get_header_dropdowns()
+    {
+        // load module header header files
+        foreach ( $this->get_modules() as $name => $module )
+        {
+            $module_file = $module['path'] . 'includes/header_dropdown_menu.php';
+            {   
+                require( $module_file );        
+            } 
+        }
+    }
+
     public function get_modules( $exclude_core = true )
     {
         $modules = $this->modules;

@@ -8,3 +8,13 @@
     font-size: 15px !important;
     /* font-family: Times New Roman !important; */
 }
+
+.header-link-btn {
+    background: lightgrey;
+    padding: 3px 10px 3px 10px;
+    border-radius: 3px;
+    position: relative;
+    top: 13px;
+    margin-right: 10px;
+    cursor: pointer;
+}

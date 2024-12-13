@@ -540,21 +540,6 @@ class core implements module
         }
     }
 
-    protected function choices_values( $entities_id, $items_id, $field_id, $value )
-    {
-        //insert choices values for fields with multiple values
-        global $app_fields_cache;
-
-        $choices_values = new \choices_values( $entities_id );
-        $options = array(
-            'class' => $app_fields_cache[$entities_id][$field_id]['type'],
-            'field' => array( 'id' => $field_id ),
-            'value' => ( strlen( $value ) ? explode( ',', $value ) : '' )
-        );
-        $choices_values->prepare( $options );
-        $choices_values->process( $items_id );
-    }
-
     public function update_entities()
     {
         // print_rr('in update_entities function');
@@ -786,7 +771,8 @@ class core implements module
             $user_companies = $this->get_user_companies();
             $companies_users = $this->get_companies_users(); 
             $values = $join = $system_entity_fields = '';
-            if ( isset( $this->data['field_id'] ) ) 
+            $excluded_fields = array( 'attachments' );
+            if ( isset( $this->data['field_id'] ) && !in_array( $this->data['field_id'], 'attachments' ) ) 
             {
                 $join = "
                     LEFT JOIN app_entity_{$entities_id}_values AS v
@@ -2007,6 +1993,43 @@ class core implements module
         $log_item_id = db_insert_id();
     }
 
+    public function on_create_ticket()
+    {
+        // print_rr('in on create ticket function');
+        if ( isset( $this->data['items_id'] ) )
+        {
+            $items_id = $this->data['items_id'];
+            $sql = "SELECT * FROM app_entity_23 WHERE id='" . db_input( $items_id ) . "'";
+            if ( $result = db_fetch_array( db_query( $sql ) ) )
+            {
+                $submitted_by_user_id = ( empty( $result['field_1461'] ) ) ? $result['created_by'] : $result['field_1461'];
+                $this->choices_values( 23, $items_id, 1449, $submitted_by_user_id, true );
+                $this->choices_values( 23, $items_id, 183, 57, true );
+            }
+        }
+        // die(print_rr('pause'));
+    }
+
+    protected function choices_values( $entities_id, $items_id, $field_id, $value, $update_entity = false )
+    {
+        //insert choices values for fields with multiple values
+        global $app_fields_cache;
+
+        $choices_values = new \choices_values( $entities_id );
+        $options = array(
+            'class' => $app_fields_cache[$entities_id][$field_id]['type'],
+            'field' => array( 'id' => $field_id ),
+            'value' => ( strlen( $value ) ? explode( ',', $value ) : '' )
+        );
+        $choices_values->prepare( $options );
+        $choices_values->process( $items_id );
+        if ( $update_entity )
+        {
+            $sql = "UPDATE app_entity_{$entities_id} SET field_{$field_id}='" . db_input( $value ) . "' WHERE id='" . db_input( $items_id ) . "'";
+            db_query( $sql );
+        }
+    }
+    
     public function get_map_markers()
     {
         // print_rr('in get_map_markers function');

@@ -61,7 +61,7 @@ var plugin = plugin || {
                         console.log('Error: ' + response_obj.data);
                     }
                 }
-                let reports_id = this.form['reports_id'];
+                let reports_id = core.get_reports_id();
                 let url = `${this.url}&action=get_reports_info&reports_id=${reports_id}`;
                 // console.log('prepare_add_item_form url',url)
                 core.ajax_get( url, callback );
@@ -120,7 +120,8 @@ var plugin = plugin || {
         info['method']= this.form_element.prop( 'method' );
         this.form['info'] = info;
         this.get_form_hidden_inputs();
-        // console.log(this.form)
+        core.get_form_url_params();
+        console.log('in get_form functionn - this.form is ',this.form)
     },
     get_form_hidden_inputs:function() {
         let obj = this;
@@ -130,28 +131,6 @@ var plugin = plugin || {
             let value = input.val();
             obj.form[input.prop( 'id' )] = input.val();
         });
-    },
-    get_action_params:function( url = null ) {
-        // console.log('url',url);
-        let query_string = ( url === null ) ? window.location.search : new URL( url ).search;
-        let search_params = new URLSearchParams( query_string );
-        let module = search_params.get( 'module' );
-        let params = {};
-        // console.log(search_params);
-        for( const param of search_params ) {
-            // console.log(param);
-            let key = param[0];
-            if ( module == 'items/processes' && key == 'id' ) {
-                // console.log('key',key,'value',param[1]);
-                key = 'process_id';
-            }
-            if ( $( `#${key}` ).length == 0 ) {
-                // console.log('create input as it does not exist',key);
-                $( '.form-body' ).prepend( `<input type="hidden" id="${key}" name="${key}" value="${param[1]}">` );
-            }
-            params[param[0]] = param[1];
-        }
-        return params;
     },
     wait_until_exists:function( selector ) {
         return new Promise( resolve => {
@@ -213,16 +192,16 @@ var plugin = plugin || {
 
 $( function() {
     // console.log('primary button')
-    $( '.btn-primary' ).on( 'click', function( e ) {
-        // console.log('primary button clicked')
-        plugin.get_modal_url( e );
-        // console.log('modal url',plugin.modal_url);
-        $( '#ajax-modal' ).on( 'show.bs.modal', function( e ) {
-            // console.log('primary button modal show event')
-            let modal_form = $( '#ajax-modal form' );
-            if ( modal_form.length > 0 ) plugin.on_modal_load( modal_form );
-        });
-    });
+    // $( '.btn-primary' ).on( 'click', function( e ) {
+    //     console.log('primary button clicked')
+    //     plugin.get_modal_url( e );
+    //     // console.log('modal url',plugin.modal_url);
+    //     $( '#ajax-modal' ).on( 'show.bs.modal', function( e ) {
+    //         // console.log('primary button modal show event')
+    //         let modal_form = $( '#ajax-modal form' );
+    //         if ( modal_form.length > 0 ) plugin.on_modal_load( modal_form );
+    //     });
+    // });
     // allow for modal to be loaded from action buttons
     plugin.wait_until_modal_exists( 'ajax-modal' );
     // wait until entity_items_listing is loaded and then attach event listener for on click event

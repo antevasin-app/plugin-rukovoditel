@@ -13,7 +13,10 @@ var core = core || {
     url: "<?php echo $url; ?>",
     files_url: "<?php echo $files_url; ?>",
     plugin_path: "<?php echo PLUGIN_PATH; ?>",
-    ajax_headers: {},
+    ajax_headers: {},    
+    user_id: <?php echo $app_user['id']; ?>,
+    user_name: "<?php echo $app_user['name']; ?>",
+    username: "<?php echo $app_user['username']; ?>",
     expand_pre:function() {
         $( 'pre' ).on( 'click', function() {  
             let height = $( this ).css( 'max-height' );   
@@ -223,6 +226,66 @@ var core = core || {
             $( `#btn_submodal_edit_item_${field_id}` ).show()
         }        
     },
+    get_action_params:function( url = null ) {
+        // console.log('url',url);
+        let query_string = ( url === null ) ? window.location.search : new URL( url ).search;
+        let search_params = new URLSearchParams( query_string );
+        let module = search_params.get( 'module' );
+        let params = {};
+        console.log(search_params);
+        for( const param of search_params ) {
+            // console.log(param);
+            let key = param[0];
+            if ( module == 'items/processes' && key == 'id' ) {
+                console.log('key',key,'value',param[1]);
+                key = 'process_id';
+            }
+            if ( $( `#${key}` ).length == 0 ) {
+                console.log('create input as it does not exist',key);
+                $( '.form-body' ).prepend( `<input type="hidden" id="${key}" name="${key}" value="${param[1]}">` );
+            }
+            params[param[0]] = param[1];
+        }
+        return params;
+    },
+    get_form_url_params() {
+        let properties = [ 'action_url', 'form_url', 'modal_url', 'page_url' ];
+        $.each( properties, function( index, property ) {
+            if ( plugin.form[property] ) {
+                let params = core.get_url_params( plugin.form[property] );
+                console.log(property,params);
+                if ( params.module && params.action && params.id ) {
+                    if ( params.module == 'items/processes' ) {
+                        if ( typeof plugin.form.module === 'undefined' ) {
+                            plugin.form['module'] = 'items/processes';
+                        }
+                        if ( typeof plugin.form.process_id === 'undefined' ) {
+                            plugin.form['process_id'] = params.id;
+                        }
+                    }                    
+                }
+                if ( params.path ) {
+                    if ( typeof plugin.form.path === 'undefined' ) {
+                        plugin.form['path'] = params.path;
+                    } 
+                }
+                if ( params.redirect_to ) {
+                    if ( typeof plugin.form.redirect_to === 'undefined' ) {
+                        plugin.form['redirect_to'] = params.redirect_to;
+                    } 
+                }
+            }
+        });
+    },
+    get_url_params:function( url = null ) {
+        let query_string = ( url === null ) ? window.location.search : new URL( url ).search;
+        let search_params = new URLSearchParams( query_string );
+        let params = {};
+        for( const param of search_params ) {
+            params[param[0]] = param[1];
+        }
+        return params;
+    },
     get_status_field_value_info:function( field_id ) {
         // console.log('in get_status_field_value_info',field_id);
         // look up the status field value and see if it is a system status
@@ -236,6 +299,39 @@ var core = core || {
             }
         }
         core.ajax_get( url, callback );
+    },
+    get_reports_id:function() {
+        var reports_id = 0;
+        if ( $( '#reports_id' ).length > 0 ) {
+            reports_id = $( this ).val();
+        } else {
+            let url_params = core.get_url_params();
+            // console.log(url_params);
+            if ( url_params.reports_id ) reports_id = url_params.reports_id;
+        }
+        return reports_id;
+    },
+    get_user_id:function() {
+        var user_id = 0;
+        $.each( $( 'body' ).prop( 'class' ).split( ' ' ), function ( index, class_name ) {
+            if ( class_name != '' ) {
+                if ( class_name.startsWith( 'page-user-' ) ) {
+                    let info = class_name.split( 'page-user-' ) 
+                    user_id = info[1]
+                } 
+            }
+        });
+        return user_id;
+    },
+    get_uat_btn_url:function() {
+        console.log('uat button clicked');
+        let public_form_url = `<?php echo url_for( 'ext/public/form', 'id=1' ) ?>`
+        let user_id = core.get_user_id();   
+        let page_url = encodeURIComponent( window.location.href );
+        let url = public_form_url + `&fields[1461]=` + user_id + `&fields[1448]=` + page_url;
+        console.log(url);
+        return url;
+        // window.open( url, '_blank')
     },
     set_required_fields:function( fields, remove = false ) {
         // console.log(fields);
@@ -323,10 +419,10 @@ var core = core || {
         let options = new Option( option_obj.text, option_obj.id, false, false );
         let field = $( `#fields_${option_obj.field_id}` );
         field.append( options ).trigger( 'change' );
-        // console.log(`option obj is `,option_obj,`existing field value is`,field.val()); 
+        // console.log(`option obj is `,option_obj,`option value to set is `,option_obj.id,`existing field value is`,field.val()); 
         if ( field.prop( 'multiple' ) ) {
             let selected_values = field.val() || [];
-            // console.log('selected values before',selected_values); 
+            // console.log('selected values before',selected_values);
             if ( !selected_values.includes( option_obj.id ) ) {
                 // console.log('pushing value');
                 selected_values.push( option_obj.id );
