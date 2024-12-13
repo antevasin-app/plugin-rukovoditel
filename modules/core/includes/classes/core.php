@@ -1520,7 +1520,7 @@ class core implements module
         $is_link = false;
         $module_name = $this->get_name();
         $is_link_file = PLUGIN_PATH . 'modules/' . $module_name;
-        if ( is_link( $is_link_file ) ) $is_link = true;
+        if ( is_link( $is_link_file ) && $_SERVER['HTTP_HOST'] == 'localhost' ) $is_link = true;
         return $is_link;  
     }
 

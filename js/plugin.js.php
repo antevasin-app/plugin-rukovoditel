@@ -107,8 +107,6 @@ var plugin = plugin || {
         if ( $( '.form-body #modal_url' ).length == 0 ) $( '.form-body' ).prepend( `<input type="hidden" id="modal_url" name="modal_url" value="${this.modal_url}">` );
         if ( $( '.form-body #form_url' ).length == 0 ) $( '.form-body' ).prepend( `<input type="hidden" id="form_url" name="form_url" value="${form_url}">` );
         if ( $( '.form-body #action_url' ).length == 0 ) $( '.form-body' ).prepend( `<input type="hidden" id="action_url" name="action_url" value="${action_url}">` );
-        // return;
-
         // this.form = this.get_action_params( action );
         // console.log(this); 
         let info = {}
