@@ -1450,7 +1450,6 @@ class core implements module
                 {
                     $file_actions .= ( $this->check_link_files() ) ? '' : $reinstall . $branches . $latest_branch_commit;
                 }   
-                print_rr($file_actions);              
                 // $reinstall = ( $module['name'] == 'core' ) ? '' : $this->get_reinstall_link( $module['name'] );
                 // $reinstall = ( $module['name'] == 'core' ) ? '' : $reinstall_link;
                 // $latest_version = '<a href="open_dialog( `https://unicloud.co.nz` )" style="color: red;">Version 1.0.1 Available</a>';
@@ -1521,7 +1520,7 @@ class core implements module
         $is_link = false;
         $module_name = $this->get_name();
         $is_link_file = PLUGIN_PATH . 'modules/' . $module_name;
-        print_rr($is_link_file); print_rr("is link is $is_link"); print_rr($_SERVER['HTTP_HOST']);
+        // print_rr($is_link_file); print_rr("is link is $is_link"); print_rr($_SERVER['HTTP_HOST']);
         if ( is_link( $is_link_file ) && $_SERVER['HTTP_HOST'] == 'localhost' ) $is_link = true;
         return $is_link;  
     }
