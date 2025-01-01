@@ -1383,9 +1383,10 @@ class core implements module
         {
             $existing_config = json_decode( constant( $this->cfg ), true );
             // compare existing config with proposed config to pick up any new configuration
-            $this->config = $updated_config = array_replace_recursive( $existing_config, $this->array_diff_recursive( $proposed_config, $existing_config ) );
+            $this->config = $updated_config = array_replace_recursive( $this->array_diff_recursive( $proposed_config, $existing_config ), $existing_config );
+            // print_rr($updated_config);
             if ( true ) $this->set_module_config();
-            return $updated_config;
+            return ( object ) $updated_config;
         }
         else
         {
