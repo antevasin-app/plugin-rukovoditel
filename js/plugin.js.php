@@ -119,7 +119,7 @@ var plugin = plugin || {
         this.form['info'] = info;
         this.get_form_hidden_inputs();
         core.get_form_url_params();
-        console.log('in get_form functionn - this.form is ',this.form)
+        // console.log('in get_form functionn - this.form is ',this.form)
     },
     get_form_hidden_inputs:function() {
         let obj = this;
@@ -149,7 +149,6 @@ var plugin = plugin || {
         });
     },
     wait_until_modal_exists:function( modal_id ) {
-        // console.log('wait until modal exists',modal_id)
         let selector = `#${modal_id}`;
         // console.log('wait until modal exists',modal_id,selector)
         plugin.wait_until_exists( selector ).then( function( element ) {
@@ -165,8 +164,12 @@ var plugin = plugin || {
                 // $( this ).off( 'click' );
             })
             $( selector ).on( 'shown.bs.modal', function() {
-                // console.log('modal shown event')
-                plugin.wait_until_modal_exists( 'ajax-modal' );                
+                console.log('modal shown event')
+                // plugin.wait_until_modal_exists( 'ajax-modal' );                
+            });
+            $( selector ).on( 'hidden.bs.modal', function() {
+                // console.log('modal hidden event')
+                setTimeout( plugin.wait_until_modal_exists, 500, 'ajax-modal' )
             });
         });  
     },

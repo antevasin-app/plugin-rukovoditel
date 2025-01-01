@@ -253,7 +253,7 @@ var core = core || {
         $.each( properties, function( index, property ) {
             if ( plugin.form[property] ) {
                 let params = core.get_url_params( plugin.form[property] );
-                console.log(property,params);
+                // console.log(property,params);
                 if ( params.module && params.action && params.id ) {
                     if ( params.module == 'items/processes' ) {
                         if ( typeof plugin.form.module === 'undefined' ) {
