@@ -772,11 +772,11 @@ class core implements module
             $companies_users = $this->get_companies_users(); 
             $values = $join = $system_entity_fields = '';
             $excluded_fields = array( 'attachments' );
-            if ( isset( $this->data['field_id'] ) && !in_array( $this->data['field_id'], 'attachments' ) ) 
+            if ( isset( $this->data['field_id'] ) && !in_array( $this->data['field_id'], $excluded_fields ) ) 
             {
                 $join = "
-                    LEFT JOIN app_entity_{$entities_id}_values AS v
-                    ON v.items_id=e.id
+                LEFT JOIN app_entity_{$entities_id}_values AS v
+                ON v.items_id=e.id
                 ";
                 $values = "( v.fields_id={$this->data['field_id']} AND FIND_IN_SET( v.value, '$user_companies' ) ) OR ";
             }
