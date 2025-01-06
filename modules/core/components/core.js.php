@@ -326,10 +326,11 @@ var core = core || {
     get_uat_btn_url:function() {
         console.log('uat button clicked');
         let public_form_url = `<?php echo url_for( 'ext/public/form', 'id=1' ) ?>`
-        let user_id = core.get_user_id();   
-        let page_url = encodeURIComponent( window.location.href );
+        let user_id = core.get_user_id();  
+        let window_url = window.location.href.replace( new RegExp( "https?:\/\/","gm" ), '' ); 
+        let page_url = encodeURIComponent( window_url );
         let url = public_form_url + `&fields[1461]=` + user_id + `&fields[1448]=` + page_url;
-        console.log(url);
+        console.log(window_url,url);
         return url;
         // window.open( url, '_blank')
     },
