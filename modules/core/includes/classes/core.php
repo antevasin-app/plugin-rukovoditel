@@ -2033,13 +2033,16 @@ class core implements module
         // print_rr('in on create ticket function');
         if ( isset( $this->data['items_id'] ) )
         {
+            $entities_id = 23;
+            $user_id_field = 'field_1461';
+            $user_field_id = 1449;
             $items_id = $this->data['items_id'];
-            $sql = "SELECT * FROM app_entity_23 WHERE id='" . db_input( $items_id ) . "'";
+            $sql = "SELECT * FROM app_entity_$entities_id WHERE id='" . db_input( $items_id ) . "'";
             if ( $result = db_fetch_array( db_query( $sql ) ) )
             {
-                $submitted_by_user_id = ( empty( $result['field_1461'] ) ) ? $result['created_by'] : $result['field_1461'];
-                $this->choices_values( 23, $items_id, 1449, $submitted_by_user_id, true );
-                $this->choices_values( 23, $items_id, 183, 57, true );
+                $submitted_by_user_id = ( empty( $result[$user_id_field] ) ) ? $result['created_by'] : $result[$user_id_field];
+                $this->choices_values( $entities_id, $items_id, $user_field_id, $submitted_by_user_id, true );
+                // $this->choices_values( 23, $items_id, 183, 69, true );
             }
         }
         // die(print_rr('pause'));

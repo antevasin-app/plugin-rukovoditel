@@ -329,7 +329,7 @@ var core = core || {
         let user_id = core.get_user_id();  
         let window_url = window.location.href.replace( new RegExp( "https?:\/\/","gm" ), '' ); 
         let page_url = encodeURIComponent( window_url );
-        let url = public_form_url + `&fields[1461]=` + user_id + `&fields[1448]=` + page_url;
+        let url = public_form_url + '&fields[183]=69' + `&fields[1461]=` + user_id + `&fields[1448]=` + page_url;
         console.log(window_url,url);
         return url;
         // window.open( url, '_blank')
