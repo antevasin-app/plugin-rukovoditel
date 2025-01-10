@@ -823,7 +823,30 @@ class core implements module
             }
         }   
     }
-    
+
+    public function filter_by_projects()
+    {
+        if ( isset( $this->data['entities_id'] ) )
+        {
+            $entities_id = $this->data['entities_id'];
+            $companies_users = $this->get_companies_users();
+            // print_rr($companies_users);
+            $all_items_query = db_fetch_all( "app_entity_$entities_id" );
+            $items = array();
+            while ( $results = db_fetch_array( $all_items_query ) )
+            {
+                $team_ids = ( empty( $results['field_161'] ) ) ? array() : explode( ',', $results['field_161'] );
+                // print_rr($team_ids);
+                if ( empty( $team_ids ) ) $items[$results['id']] = $results;
+                $users = array_intersect( $team_ids, explode( ',', $companies_users ) );
+                // print_rr($users);
+                if ( !empty( $users ) ) $items[$results['id']] = $results;
+            }
+            // $items = array( 2 => array( 'id' => 2, 'name' => 'Project 2' ) );
+            return $items;
+        }
+    }
+
     public function get_statuses()
     {
         if ( isset( $this->data['entities_id'] ) )
