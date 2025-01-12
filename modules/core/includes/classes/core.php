@@ -28,6 +28,7 @@ class core implements module
     protected $data;
     protected $user_id;
     protected $system_log_data = array();
+    protected $entity_user_fields = array();
 
     public function __construct( $name = null )
     {
@@ -780,10 +781,20 @@ class core implements module
                 ";
                 $values = "( v.fields_id={$this->data['field_id']} AND FIND_IN_SET( v.value, '$user_companies' ) ) OR ";
             }
-            if ( isset( $this->system_entity_fields[$entities_id] ) )
+            if ( isset( $this->system_entity_fields[$entities_id] ) ) // not sure what this was being used for...
             {
                 // for records visibility user groups are not permitted to change system entity items
                 // $system_entity_fields = " OR e.field_{$this->system_entity_fields[$entities_id]} = 'true'";
+            }
+            if ( !empty( $this->entity_user_fields ) )
+            {
+                // print_rr($this->entity_user_fields);
+                $entity_user_fields_sql = '';
+                foreach ( $this->entity_user_fields as $field_id )
+                {
+
+                    $entity_user_fields_sql .= " OR e.field_$field_id IN ( $companies_users )";
+                }
             }
             if ( !empty( $user_companies ) )
             {
@@ -796,6 +807,7 @@ class core implements module
                         $values
                         FIND_IN_SET( e.created_by, '$companies_users' )
                         $system_entity_fields
+                        $entity_user_fields_sql
                 "; 
                 // print_rr($sql);
                 $user_query = db_query( $sql );
@@ -831,18 +843,28 @@ class core implements module
             $entities_id = $this->data['entities_id'];
             $companies_users = $this->get_companies_users();
             // print_rr($companies_users);
-            $all_items_query = db_fetch_all( "app_entity_$entities_id" );
-            $items = array();
-            while ( $results = db_fetch_array( $all_items_query ) )
+            if ( $entities_id == 21 )
             {
-                $team_ids = ( empty( $results['field_161'] ) ) ? array() : explode( ',', $results['field_161'] );
-                // print_rr($team_ids);
-                if ( empty( $team_ids ) ) $items[$results['id']] = $results;
-                $users = array_intersect( $team_ids, explode( ',', $companies_users ) );
-                // print_rr($users);
-                if ( !empty( $users ) ) $items[$results['id']] = $results;
+                $all_projects_query = db_fetch_all( "app_entity_$entities_id" );
+                $projects = array();
+                while ( $results = db_fetch_array( $all_projects_query ) )
+                {
+                    $team_ids = ( empty( $results['field_161'] ) ) ? array() : explode( ',', $results['field_161'] );
+                    // print_rr($team_ids);
+                    if ( empty( $team_ids ) ) $projects[$results['id']] = $results;
+                    $users = array_intersect( $team_ids, explode( ',', $companies_users ) );
+                    // print_rr($users);
+                    if ( !empty( $users ) ) $projects[$results['id']] = $results;
+                }
+            }
+            else
+            {
+                // print_rr('entities id is not 21');
+                $this->entity_user_fields = array( 1449, 1450, 1451 );
+                $items = $this->filter_by_companies();
             }
             // $items = array( 2 => array( 'id' => 2, 'name' => 'Project 2' ) );
+            $items = ( $entities_id == 21 ) ? $projects : $items;
             return $items;
         }
     }
