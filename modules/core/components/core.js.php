@@ -380,7 +380,8 @@ var core = core || {
         }
     },
     set_ajax_dropdown:function( fields_obj ) {
-        // console.log('in set_ajax_dropdown',fields_obj);
+        if ( plugin.form.type == 'prepare_add_item_form' ) current_from_id = plugin.form.type;
+        // console.log('form',plugin.form,'fields obj',fields_obj,'current form id',current_from_id);
         let obj = {
             width: <?php echo ( is_mobile() ? '$("body").width()-70' : '"100%"' ) ?>,
             <?php echo ( ( isset( $app_layout ) && in_array( $app_layout, ['public_layout.php'] ) || in_array( $app_module_path, ['users/account'] ) ) ? '':'dropdownParent: $("#ajax-modal"),') ?>
@@ -408,7 +409,9 @@ var core = core || {
             },
             templateResult: function( d ) { return $( '<span>' + d.text + '</span>' ) }
         }
-        let dropdown = $( `#fields_${fields_obj.field_id}` );
+        let dropdown = ( Number.isInteger( fields_obj.field_id ) ) ? $( `#fields_${fields_obj.field_id}` ) : $( `#${fields_obj.field_id}` );
+        // if ( fields_obj.field_id == 'select2-parent_item_id-container' ) dropdown = $( `#parent_item_id` );
+        console.log('field id',fields_obj.field_id,'dropdown',dropdown);
         $( function() {
             dropdown.select2( 'destroy' );        
             dropdown.select2( obj );

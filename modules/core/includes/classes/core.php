@@ -771,7 +771,7 @@ class core implements module
             $status_entity_id = $this->get_entity_id( 'statuses' );         
             $user_companies = $this->get_user_companies();
             $companies_users = $this->get_companies_users(); 
-            $values = $join = $system_entity_fields = '';
+            $values = $join = $system_entity_fields = $entity_user_fields_sql = '';
             $excluded_fields = array( 'attachments' );
             if ( isset( $this->data['field_id'] ) && !in_array( $this->data['field_id'], $excluded_fields ) ) 
             {
@@ -789,7 +789,6 @@ class core implements module
             if ( !empty( $this->entity_user_fields ) )
             {
                 // print_rr($this->entity_user_fields);
-                $entity_user_fields_sql = '';
                 foreach ( $this->entity_user_fields as $field_id )
                 {
 
@@ -1005,7 +1004,7 @@ class core implements module
         } 
     }
 
-    private function get_select2_options()
+    protected function get_select2_options()
     {
         // print_rr('in get_select2_options function');
         if ( isset( $this->data['sql'] )  )
