@@ -92,6 +92,14 @@ var plugin = plugin || {
         });
         if ( typeof this[js] === 'function' ) this[js]();
     },
+    run_module_action:function( module ) {
+        let callback = function( response ) {
+            console.log('run_module_action function response',response);
+        }
+        let url = `${this.url}&action=${module}`;
+        console.log(url);
+        core.ajax_get( url, callback );
+    },
     get_form:function() {
         // console.trace();
         // let action = ( $( '#export-form' ).length > 0 ) ? $( 'form' ).prop( 'action' ) : this.form_element.prop( 'action' );

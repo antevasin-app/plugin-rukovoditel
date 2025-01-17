@@ -1006,7 +1006,8 @@ class core implements module
 
     protected function get_select2_options()
     {
-        // print_rr('in get_select2_options function');
+        // print_rr("in get_select2_options function - field entity id {$this->data['field_entity_id']} - entities id {$this->data['entities_id']}");
+        $entities_id = $this->data['entities_id'];
         if ( isset( $this->data['sql'] )  )
         {
             $user_query = db_query( $this->data['sql'] );
@@ -1015,7 +1016,7 @@ class core implements module
                 $this->items[$results['id']] = $results;
             }
         }
-        $heading_field_id = \fields::get_heading_id( $this->data['field_entity_id'] );
+        $heading_field_id = \fields::get_heading_id( $entities_id );
         uasort( $this->items, function ( $a, $b ) use ( $heading_field_id )
         {
             return strcmp( $a["field_$heading_field_id"], $b["field_$heading_field_id"] );
@@ -1023,10 +1024,16 @@ class core implements module
         $options = array();
         foreach ( $this->items as $items_id => $item )
         {
-            // print_rr($items_id);
             if ( ( isset( $this->data['filter_entity_id'] ) && isset( $this->data['filter_field_id'] ) ) && !in_array( $this->data['filter_entity_id'], explode( ',', $item["field_{$this->data['filter_field_id']}"] ) ) ) continue;
             $heading_value = \items::get_heading_field_value( $heading_field_id, $item );
             $item['heading'] = $heading_value;
+            // print_rr($this->data);
+            if ( isset( $this->data['prepare_add_item'] ) ) 
+            {
+                $form_entity_id = $this->data['form_entity_id'];
+                $items_id = "$entities_id-$items_id/$form_entity_id";
+            }
+            // print_rr($items_id);
             $option = array( 'id' => $items_id, 'text' => $heading_value, 'html' => '<div>' . $heading_value . '</div>' );
             if ( $this->get_default ) $option['field_id'] = $field_id;
             $options[] = $option;
