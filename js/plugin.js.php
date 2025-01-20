@@ -94,10 +94,10 @@ var plugin = plugin || {
     },
     run_module_action:function( module ) {
         let callback = function( response ) {
-            console.log('run_module_action function response',response);
+            alert(`Module action ${module} was run - check console for response`);
+            console.log(response);
         }
         let url = `${this.url}&action=${module}`;
-        console.log(url);
         core.ajax_get( url, callback );
     },
     get_form:function() {

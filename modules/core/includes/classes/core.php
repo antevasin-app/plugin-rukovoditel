@@ -1308,17 +1308,23 @@ class core implements module
             $addresses_field_id = $this->get_field_id( $entities_id, 'addresses' );
             $contacts_field_id = $this->get_field_id( $entities_id, 'contacts' );
             $emails_field_id = $this->get_field_id( $entities_id, 'email addresses' );
+            $phone_numbers_field_id = $this->get_field_id( $entities_id, 'contact phone numbers' );
             $items_id = $this->items_info['items_id'];
             if ( empty( $items_id ) )
             {
                 $customer_info['fields'][$addresses_field_id] = '';
                 $customer_info['fields'][$contacts_field_id] = '';
                 $customer_info['fields'][$emails_field_id] = '';
+                $customer_info['fields'][$phone_numbers_field_id] = '';
             }
             else
             {
                 $sql = "
-                    SELECT customers.*, addresses.id AS addresses_id, addresses.*, contacts.id AS contacts_id, contacts.*, emails.id AS emails_id, emails.* 
+                    SELECT 
+                        customers.*, addresses.id AS addresses_id, addresses.*, 
+                        contacts.id AS contacts_id, contacts.*, 
+                        emails.id AS emails_id, emails.*, 
+                        phone_numbers.id AS phone_numbers_id, phone_numbers.* 
                     FROM app_entity_63 AS customers
                     LEFT JOIN app_entity_32 AS addresses
                     ON FIND_IN_SET( addresses.id, customers.field_1207 )
@@ -1326,6 +1332,8 @@ class core implements module
                     ON FIND_IN_SET( contacts.id, customers.field_1206 )
                     LEFT JOIN app_entity_50 AS emails
                     ON FIND_IN_SET( emails.id, customers.field_1209 )
+                    LEFT JOIN app_entity_39 AS phone_numbers
+                    ON FIND_IN_SET( phone_numbers.id, customers.field_1212 )
                     WHERE customers.id IN ( $items_id );
                 ";
                 // print_rr($sql);
@@ -1340,6 +1348,8 @@ class core implements module
                     $customer_info['fields'][$contacts_field_id][$result['contacts_id']] = $result["field_$contacts_heading_field_id"];
                     $emails_heading_field_id = \fields::get_heading_id( 50 );
                     $customer_info['fields'][$emails_field_id][$result['emails_id']] = $result["field_$emails_heading_field_id"];
+                    $phone_numbers_heading_field_id = \fields::get_heading_id( 39 );
+                    $customer_info['fields'][$phone_numbers_field_id][$result['phone_numbers_id']] = $result["field_$phone_numbers_heading_field_id"];
                 }
                 // print_rr($customer_info);
             }
