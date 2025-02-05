@@ -626,8 +626,10 @@ var maps = maps || {
             }
             async function init_map() {
                 await google.maps.importLibrary("places");
+                // get local users country code to add to google maps options
+                let local_users_country = 'uk'; // get this from location....
                 const options = {
-                    componentRestrictions: { country: plugin.country_code }
+                    componentRestrictions: { country: [ local_users_country, plugin.country_code ] },
                 };
                 const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement( options );
                 $( '#google_address_lookup' ).html( placeAutocomplete )
