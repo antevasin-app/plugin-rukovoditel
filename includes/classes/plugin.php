@@ -22,9 +22,17 @@ class plugin
         $this->require_functions();
         $this->require_classes();
         $this->require_modules();
+        $this->set_country_code();
     }  
     
     // setter functions
+    private function set_country_code()
+    {
+        $timezone = new \DateTimeZone( CFG_APP_TIMEZONE );
+        $country_code = $timezone->getLocation()['country_code'];
+        if ( !defined( 'CFG_APP_COUNTRY_CODE' ) ) define( 'CFG_APP_COUNTRY_CODE', $country_code );
+    }
+
     private function set_plugin_path()
     {
         $this->plugin_path = 'plugins/' . PLUGIN_NAME . '/';    

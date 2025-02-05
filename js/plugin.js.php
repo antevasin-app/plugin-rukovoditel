@@ -16,7 +16,8 @@ $.getScript( "<?php echo PLUGIN_PATH ?>js/jquery.serializeToJSON.js", function()
 var plugin = plugin || {  
     url: "<?php echo $url; ?>",  
     logged_users_id: <?php echo $app_logged_users_id; ?>,
-    modules: <?php echo $modules; ?>,   
+    modules: <?php echo $modules; ?>, 
+    country_code: "<?php echo CFG_APP_COUNTRY_CODE; ?>",  
     modal_url: '',
     form_url: '',
     action_url: '',
