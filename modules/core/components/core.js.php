@@ -180,10 +180,10 @@ var core = core || {
     },
     filter_status_field:function() {
         // console.log('in filter_status_field function',plugin.form); 
-        // console.trace();
-        if ( plugin.form.entities_id ) {
+        if ( plugin.form.entities_id || plugin.form.sub_items ) {
             // let url = `${core.url}&action=filter_status_field&entities_id=${plugin.form.entities_id}`;
-            let get_default_url = `${core.url}&action=filter_statuses&get_default=true&entities_id=${plugin.form.entities_id}`;
+            let entities_id = ( plugin.form.sub_items ) ? plugin.form.sub_items.path : plugin.form.entities_id;
+            let get_default_url = `${core.url}&action=filter_statuses&get_default=true&entities_id=${entities_id}`;
             // console.log(get_default_url);
             let get_default_callback = function( response ) {
                 // console.log('in get_default_callback function',response);
@@ -192,6 +192,7 @@ var core = core || {
                     // console.log(response_obj);
                     if ( response_obj.field_id && response_obj.default ) {
                         let field_id = response_obj.field_id;
+                        console.log('field id',field_id,$( `#btn_submodal_edit_item_${field_id}` ));
                         $( `#btn_submodal_edit_item_${field_id}` ).hide()
                         let status_field = $( `#fields_${field_id}` );
                         status_field.on( 'select2:select', function ( e ) {
@@ -355,8 +356,9 @@ var core = core || {
     set_ajax_field_default:function( field_id, disabled = false ) {
         if ( plugin.form.entities_id ) {
             let url = `${core.url}&action=set_ajax_field_default&entities_id=${plugin.form.entities_id}&field_id=${field_id}`; 
+            // console.log(url)
             let callback = function( response ) {
-                // console.log(response);
+                console.log(response);
                 if ( response != '' ) {
                     let response_obj = JSON.parse( response );
                     // console.log(response_obj);
@@ -411,7 +413,7 @@ var core = core || {
         }
         let dropdown = ( Number.isInteger( fields_obj.field_id ) ) ? $( `#fields_${fields_obj.field_id}` ) : $( `#${fields_obj.field_id}` );
         // if ( fields_obj.field_id == 'select2-parent_item_id-container' ) dropdown = $( `#parent_item_id` );
-        console.log('field id',fields_obj.field_id,'dropdown',dropdown);
+        // console.log('field id',fields_obj.field_id,'dropdown',dropdown);
         $( function() {
             dropdown.select2( 'destroy' );        
             dropdown.select2( obj );
@@ -528,6 +530,31 @@ var core = core || {
         field.off( 'select2:opening.select2-disable' )
         .off( 'select2:clearing.select2-disable' )
     },
+    setup_manual_address:function() {
+        console.log('in manual_address function');
+        let address_field = $( '#fields_557' );
+        if ( address_field.val().length > 0 ) {
+            console.log('address field has a value',maps.address_fields);
+        }
+        if ( $( '#save_manual_address' ).length == 0 ) {
+            $( '#fields_566_rendered_value' ).after( '<div style="clear: both;"><button id="save_manual_address" class="btn" type="button" style="margin-top: 5px;">Save Address</button></div>' )
+            $( '#save_manual_address' ).on( 'click', function() {
+                console.log('save manual address button clicked');
+                let manual_address_fields = [ 562, 563 ,564 ,565 ,566 ];
+                let manual_address = [];
+                $.each( manual_address_fields, function( index, field_id ) {
+                    let field = $( `#fields_${field_id}` );
+                    let value = field.val();
+                    if ( value ) {
+                        manual_address.push( value );
+                    }
+                });
+                let address = manual_address.join( ', ' );
+                address_field.val( address );
+            }); 
+        }
+        
+    },
     manually_assign_user_checkbox:function( fields_obj ) {
         $( `#fields_${fields_obj.trigger_field_id}` ).on( 'change', function() {
             if (  $( this ).closest( 'span' ).hasClass( 'checked' ) ) {
@@ -558,43 +585,107 @@ var ui = ui || {
 }
 
 var maps = maps || {
+    address_components: {},
+    address_fields: { 
+        street_address: {field_id: 562},
+        town_city: {field_id: 563}, 
+        state_region: {field_id: 564}, 
+        postcode: {field_id: 565}, 
+        country: {field_id: 566}
+    },
     init_google:function() {
         (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})
         ({key: "AIzaSyCJue_fSK533hqpKHe5LSSkgizsG9mzyXU", v: "beta"});
     },
     add_google_address_lookup:function( fields_obj = {} ) {
-        // maps.add_google_address_lookup({on:239,lat:240,lng:241,visibility:{lat:false,lng:false}});
+        // html font-size declaration here placeautocomplete setting font-size to .rem value
+        $( 'html' ).css( 'font-size', '20px' ); 
         if ( fields_obj.on ) {
             let on_field = ( Number.isInteger( fields_obj.on ) ) ? `#fields_${fields_obj.on}` : fields_obj.on;
             var to_field = ( fields_obj.to ) ? fields_obj.to : fields_obj.on;
             to_field = ( Number.isInteger( to_field ) ) ? `#fields_${to_field}` : to_field;
-            $( on_field ).after( '<div id="google_address_lookup" class="input-large"></div>' )
+            $( on_field ).after( '<div id="google_address_lookup" class="input-xlarge"></div>' )
             if ( fields_obj.visibility  ) {
                 $( `.form-group-${fields_obj.lat}` ).toggle( fields_obj.visibility.lat )
                 $( `.form-group-${fields_obj.lng}` ).toggle( fields_obj.visibility.lng )
             }
+            async function handle_place_selection( place ) {
+                await place.fetchFields({
+                    fields: [ "displayName", "addressComponents", "formattedAddress", "location" ],
+                });
+                const response_obj = place.toJSON();
+                maps.get_address_fields( response_obj.addressComponents );
+                const address = response_obj.formattedAddress;
+                $( to_field ).val( address );
+                if ( fields_obj.lat ) {
+                    $( `#fields_${fields_obj.lat}` ).val( response_obj.location.lat );                        
+                }
+                if ( fields_obj.lng ) {
+                    $( `#fields_${fields_obj.lng}` ).val( response_obj.location.lng );
+                }
+            }
             async function init_map() {
                 await google.maps.importLibrary("places");
-                const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement();
+                const options = {
+                    componentRestrictions: { country: plugin.country_code }
+                };
+                const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement( options );
                 $( '#google_address_lookup' ).html( placeAutocomplete )
-                
-                placeAutocomplete.addEventListener( "gmp-placeselect", async ({ place }) => {
-                    await place.fetchFields({
-                        fields: ["displayName", "formattedAddress", "location"],
-                    });
-                    const response_obj = place.toJSON();
-                    const address = response_obj.formattedAddress;
-                    $( to_field ).val( address );
-                    if ( fields_obj.lat ) {
-                        $( `#fields_${fields_obj.lat}` ).val( response_obj.location.lat );                        
-                    }
-                    if ( fields_obj.lng ) {
-                        $( `#fields_${fields_obj.lng}` ).val( response_obj.location.lng );
+                    // Event listener for gmp-placeselect
+                placeAutocomplete.addEventListener('gmp-placeselect', async ({ place }) => {
+                    console.log('place selected',place);
+                    handle_place_selection( place );
+                });
+
+                // Event listener for mouse click on suggestions
+                document.addEventListener( 'click', function( event ) {
+                    console.log('click event',event);
+                    if ( event.target.closest( '.pac-item' ) ) {
+                        // Wait a bit for the place to be updated
+                        setTimeout(async () => {
+                            const place = placeAutocomplete.getPlace();
+                            if ( place ) {
+                                handle_place_selection( place );
+                            }
+                        }, 100 ); // Small delay to ensure the place is available
                     }
                 });
+                // placeAutocomplete.addEventListener( "gmp-placeselect", async ( { place } ) => {
+                //     await place.fetchFields({
+                //         fields: [ "displayName", "addressComponents", "formattedAddress", "location" ],
+                //     });
+                //     const response_obj = place.toJSON();
+                //     maps.get_address_fields( response_obj.addressComponents );
+                //     const address = response_obj.formattedAddress;
+                //     $( to_field ).val( address );
+                //     if ( fields_obj.lat ) {
+                //         $( `#fields_${fields_obj.lat}` ).val( response_obj.location.lat );                        
+                //     }
+                //     if ( fields_obj.lng ) {
+                //         $( `#fields_${fields_obj.lng}` ).val( response_obj.location.lng );
+                //     }
+                // });
             }
             init_map();
         }
+    },
+    get_address_fields:function( fields_obj ) {
+        let address_components = {};
+        $.each( fields_obj, function( index, component ) {
+            $.each( component.types, function( index, type ) {
+                address_components[type] = { "long": component.longText, "short": component.shortText };
+            })
+        });
+        maps.address_components = address_components;
+        console.log(address_components);
+        let street_number = ( address_components.street_number ) ? address_components.street_number.long : '';
+        let route = ( address_components.route ) ? address_components.route.long : '';
+        maps.address_fields.street_address.value = street_number + ' ' + route;
+        maps.address_fields.town_city.value = ( address_components.locality ) ? address_components.locality.long : address_components.postal_town.long;
+        maps.address_fields.state_region.value = address_components.administrative_area_level_1.long;
+        maps.address_fields.postcode.value = address_components.postal_code.long;
+        maps.address_fields.country.value = address_components.country.long;
+        console.log(maps.address_fields);
     },
     buildContent:function( marker ) {
         const content = document.createElement("div");    
