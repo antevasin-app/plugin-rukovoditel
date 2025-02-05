@@ -354,7 +354,7 @@ class core implements module
         }
     }
 
-    protected function get_ajax_field_entity_id( $field_id )
+    protected function get_ajax_field_entities_id( $field_id )
     {
         $sql = "SELECT * FROM app_fields WHERE id=$field_id";
         if ( $result = db_fetch_array( db_query( $sql ) ) )
@@ -715,7 +715,7 @@ class core implements module
             // print_rr($results); 
             $companies[$results['id']] = $results;
         }
-        // die(print_rr($companies));
+        if ( empty( $companies ) ) return 0;
         return implode( ',', array_keys( $companies ) );   
     }
 
