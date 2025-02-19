@@ -83,15 +83,15 @@ var plugin = plugin || {
         this.run_function( js );
     },
     run_function:function( function_name ) {
-        // console.log('js function to run',js)
+        // console.log('js function to run',function_name)
         $.each( this.modules, function( name, info ) {
             if ( window[name] ) {
-                if ( name != '' && typeof window[name][js] === 'function' ) {
-                    window[name][js]();
+                if ( name != '' && typeof window[name][function_name] === 'function' ) {
+                    window[name][function_name]();
                 }
             }
         });
-        if ( typeof this[js] === 'function' ) this[js]();
+        if ( typeof this[function_name] === 'function' ) this[function_name]();
     },
     run_module_action:function( module ) {
         let callback = function( response ) {

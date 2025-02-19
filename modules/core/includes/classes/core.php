@@ -766,20 +766,24 @@ class core implements module
         // print_rr('in filter_by_companies function');
         if ( isset( $this->data['entities_id'] ) )
         {
-            // print_rr($this->data);
             $entities_id = $this->data['entities_id'];
             $status_entity_id = $this->get_entity_id( 'statuses' );         
             $user_companies = $this->get_user_companies();
             $companies_users = $this->get_companies_users(); 
-            $values = $join = $system_entity_fields = $entity_user_fields_sql = '';
+            $values = $join = $system_entity_fields = $entity_user_fields_sql = $form_filter_sql = '';
             $excluded_fields = array( 'attachments' );
             if ( isset( $this->data['field_id'] ) && !in_array( $this->data['field_id'], $excluded_fields ) ) 
             {
+                $form_field_id = $this->data['field_id'];
                 $join = "
                 LEFT JOIN app_entity_{$entities_id}_values AS v
                 ON v.items_id=e.id
                 ";
-                $values = "( v.fields_id={$this->data['field_id']} AND FIND_IN_SET( v.value, '$user_companies' ) ) OR ";
+                $values = "( v.fields_id=$form_field_id AND FIND_IN_SET( v.value, '$user_companies' ) ) OR ";
+                // print_rr("field id is $form_field_id");
+                $form_entities_id = $this->get_field_entity_id( $form_field_id );
+                $entities_field_id = $this->get_field_id( $entities_id, 'forms' );
+                if ( !empty( $entities_field_id ) ) $form_filter_sql = "AND FIND_IN_SET( $form_entities_id, field_$entities_field_id)";
             }
             if ( isset( $this->system_entity_fields[$entities_id] ) ) // not sure what this was being used for...
             {
@@ -807,6 +811,7 @@ class core implements module
                         FIND_IN_SET( e.created_by, '$companies_users' )
                         $system_entity_fields
                         $entity_user_fields_sql
+                        $form_filter_sql
                 "; 
                 // print_rr($sql);
                 $user_query = db_query( $sql );
@@ -829,6 +834,11 @@ class core implements module
                     $this->dialog_filter();
                     exit();
                 } 
+                if ( $app_action == 'form_single_field' )
+                {
+                    $items = array();
+                    // print_rr($this); die(print_rr("form_single_field"));
+                }
                 ksort( $items );
                 return $items;
             }
@@ -1247,16 +1257,21 @@ class core implements module
             $user_companies = $this->get_user_companies();
             $companies_users = $this->get_companies_users(); 
             $field_id = $this->data['field_id'];
-            $entities_id = $this->get_ajax_field_entity_id( $field_id );
-            $heading_field_id = \fields::get_heading_id( $entities_id );
-            if ( $entities_id == 1 )
+            $form_entities_id = $this->data['entities_id'];
+            $field_entities_id = $this->get_ajax_field_entities_id( $field_id );
+            $heading_field_id = \fields::get_heading_id( $field_entities_id );
+            if ( $field_entities_id == 1 )
             {
                 $sql = "SELECT * FROM app_entity_1 WHERE id={$this->user_id}";
             }
             else
             {
-                $default_field_id = $this->get_field_id( $entities_id, 'default' );
-                $sql = "SELECT * FROM app_entity_{$entities_id} WHERE field_{$default_field_id}='true' AND FIND_IN_SET( created_by, '$companies_users' )";
+                $default_field_id = $this->get_field_id( $field_entities_id, 'default' );
+                $forms_field_id = $this->get_field_id( $field_entities_id, 'forms' );
+                // print_rr("form entities id is $form_entities_id - field entities id is $field_entities_id"); print_rr("form field id $forms_field_id");
+                $form_filter_sql = '';
+                if ( !empty( $forms_field_id ) ) $form_filter_sql = "AND FIND_IN_SET( $form_entities_id, field_$forms_field_id)";
+                $sql = "SELECT * FROM app_entity_{$field_entities_id} WHERE field_{$default_field_id}='true' AND FIND_IN_SET( created_by, '$companies_users' ) $form_filter_sql";
             }
             // print_rr($sql); print_rr($field_id); print_rr($entities_id); print_rr($heading_field_id); 
             // print_rr($default_field_id);
