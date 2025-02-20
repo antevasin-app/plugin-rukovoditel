@@ -759,6 +759,18 @@ class core implements module
         }
     }
 
+    // records visibility
+
+    public function get_records_visibility_sql( $function )
+    {
+        // print_rr($function);    
+        $items  = array_keys( $this->$function() );
+        $items_list = ( empty( $items ) ) ? 0 : $items;
+        // print_rr($items_list);
+        $sql = "e.id IN ( " . db_input_in( $items_list ) . " )";
+        return $sql;
+    }
+
     public function filter_by_companies()
     {
         global $app_module_path, $app_module, $app_action;
