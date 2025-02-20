@@ -833,24 +833,26 @@ class core implements module
                 {
                     $items[$results['id']] = $results;
                 }
-                // print_rr("entities id: $entities_id, status entity id: $status_entity_id");
+                // print_rr($items); print_rr("entities id: $entities_id, status entity id: $status_entity_id");
                 $this->items = $items;
-                // print_rr($items);
+                // print_rr($app_action); die(print_rr($this->data));
                 if ( $entities_id == $status_entity_id && in_array( $app_action, array( 'select2_entities_filter', 'select2_json' ) ) )
                 {
+                    // die(print_rr('in select2_entities_filter function'));
                     $this->select2_statuses_filter();
                     exit();
                 } 
                 // print_rr($app_action); print_rr($this->data);
                 if ( $app_action == 'select2_json' )
                 {
+                    // die(print_rr('in select2_json function'));
                     $this->dialog_filter();
                     exit();
                 } 
                 if ( $app_action == 'form_single_field' )
                 {
                     $items = array();
-                    // print_rr($this); die(print_rr("form_single_field"));
+                    // print_rr($items); die(print_rr("form_single_field"));
                 }
                 ksort( $items );
                 return $items;
@@ -1335,7 +1337,6 @@ class core implements module
 
     public function set_ajax_field_default()
     {
-        // print_rr($this->data);
         if ( isset( $this->data['field_id'] ) )
         {   
             $user_companies = $this->get_user_companies();
@@ -1357,8 +1358,8 @@ class core implements module
                 if ( !empty( $forms_field_id ) ) $form_filter_sql = "AND FIND_IN_SET( $form_entities_id, field_$forms_field_id)";
                 $sql = "SELECT * FROM app_entity_{$field_entities_id} WHERE field_{$default_field_id}='true' AND FIND_IN_SET( created_by, '$companies_users' ) $form_filter_sql";
             }
-            // print_rr($sql); print_rr($field_id); print_rr($entities_id); print_rr($heading_field_id); 
-            // print_rr($default_field_id);
+            // die(print_rr($sql)); 
+            // print_rr($field_id); print_rr($field_entities_id); print_rr($heading_field_id); print_rr($default_field_id);
             $user_query = db_query( $sql );  
             $items = array();          
             while ( $results = db_fetch_array( $user_query ) )
