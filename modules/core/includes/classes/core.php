@@ -407,29 +407,6 @@ class core implements module
         }
     }
 
-    public function filter_entities()
-    {
-        // TODO filter to those entities which the user has access to
-        $entities_entity_id = $this->get_entity_id( 'entities' );
-        if ( $entities_entity_id > 0 )
-        {
-            $sql = "SELECT * FROM app_entity_{$entities_entity_id}";
-            $user_query = db_query( $sql );
-            $form_entities = array();
-            while ( $results = db_fetch_array( $user_query ) )
-            {
-                $include_field_id = $this->get_field_id( $entities_entity_id, 'include' );
-                if ( $results["field_$include_field_id"] == 'true' )
-                {
-                    $entity_id = $results['id'];
-                    $form_entities[$entity_id] = $results;
-                }
-            }
-            // print_rr($form_entities);
-            return $form_entities;
-        }
-    }
-
     public function update_module_config( $config ) 
     {
         $module_name = strtoupper( $this->get_name() );
@@ -686,7 +663,7 @@ class core implements module
         return $iframe_url;
     }
 
-    public function get_user_companies()
+    public function get_user_companies( $list = true )
     {
         // print_rr($this->user_id);
         $sql = "SELECT * FROM app_related_items_1_60 WHERE entity_1_items_id={$this->user_id}";
@@ -716,7 +693,7 @@ class core implements module
             $companies[$results['id']] = $results;
         }
         if ( empty( $companies ) ) return 0;
-        return implode( ',', array_keys( $companies ) );   
+        return ( $list ) ? implode( ',', array_keys( $companies ) ) : $companies;   
     }
 
     public function get_companies_users()
@@ -761,21 +738,46 @@ class core implements module
 
     // records visibility
 
-    public function get_records_visibility_sql( $function )
+    public function get_records_visibility_sql( $function, $args = array() )
     {
-        // print_rr($function);    
-        $items  = array_keys( $this->$function() );
-        $items_list = ( empty( $items ) ) ? 0 : $items;
-        // print_rr($items_list);
-        $sql = "e.id IN ( " . db_input_in( $items_list ) . " )";
+        $items  = array_keys( $this->$function( ...$args ) );
+        // $items_list = ( empty( $items ) ) ? 0 : $items;
+        if ( empty( $items ) ) return;
+        $sql = "e.id IN ( " . db_input_in( $items ) . " )";
         return $sql;
+    }
+
+    public function filter_by_user()
+    {
+        if ( isset( $this->data['entities_id'] ) )
+        {
+            $companies_users = $this->get_companies_users(); 
+            $where = ( isset( $this->data['admin' ] ) && $this->data['admin'] ) 
+            ? "FIND_IN_SET( created_by, '$companies_users' ) OR ( v.fields_id={$this->data['field_id']} AND FIND_IN_SET( v.value, '$companies_users' ) )" 
+            : "created_by={$this->user_id} OR ( v.fields_id={$this->data['field_id']} AND v.value={$this->user_id} )";
+            $sql = "
+                SELECT e.* 
+                FROM app_entity_{$this->data['entities_id']} AS e
+                LEFT JOIN app_entity_{$this->data['entities_id']}_values AS v
+                ON e.id=v.items_id
+                WHERE $where
+            ";
+            // print_rr($sql); 
+            $user_query = db_query( $sql );
+            $items = array();
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                $items[$results['id']] = $results;
+            }
+            ksort( $items );
+            return $items;  
+        }
     }
 
     public function filter_by_companies()
     {
         global $app_module_path, $app_module, $app_action;
 
-        // print_rr('in filter_by_companies function');
         if ( isset( $this->data['entities_id'] ) )
         {
             $entities_id = $this->data['entities_id'];
@@ -825,7 +827,6 @@ class core implements module
                         $entity_user_fields_sql
                         $form_filter_sql
                 "; 
-                // print_rr($sql);
                 $user_query = db_query( $sql );
                 $items = array();
                 while ( $results = db_fetch_array( $user_query ) )
@@ -855,6 +856,54 @@ class core implements module
                 return $items;
             }
         }   
+    }
+
+    public function filter_by_company_fields()
+    {
+        global $app_fields_cache;
+        
+        // print_rr("in filter_by_company_fields function - field entity id {$this->data['field_entity_id']} - entities_id {$this->data['entities_id']}"); 
+        if ( isset( $this->data['entities_id'] ) )
+        {
+            $entities_id = $this->data['entities_id']; 
+            $user_companies = $this->get_user_companies();
+            $companies_users = $this->get_companies_users(); 
+            $items = $this->filter_by_companies();
+            $entity_fields = $this->get_entity_fields( $entities_id );
+            // capture the original entity id
+            $entity_id = $this->data['entities_id'];
+            // print_rr("in filter_by_company_fields function before - entities_id {$this->data['entities_id']}"); 
+            foreach ( $entity_fields as $field_id => $field )
+            {
+                // print_rr("in filter_by_company_fields function during - entities_id {$this->data['entities_id']}"); 
+                $field_cfg = new \fields_types_cfg($app_fields_cache[$entities_id][$field_id]['configuration']);
+                $companies_field_id = $this->get_field_id( $field_cfg->get( 'entity_id' ), 'companies' );
+                if ( !empty( $companies_field_id ) )
+                {
+                    $this->data['entities_id'] = $field_cfg->get( 'entity_id' );
+                    $field_items = $this->filter_by_companies();
+                    // print_rr($field_items);
+                    if ( !empty( $field_items ) )
+                    {
+                        $field_items = implode( ',', array_keys( $field_items ) );
+                        $sql = "SELECT * FROM app_entity_{$entities_id} WHERE field_{$field_id} IN ( $field_items )";
+                        // print_rr($sql);
+                        $user_query = db_query( $sql );
+                        while ( $results = db_fetch_array( $user_query ) )
+                        {
+                            $items[$results['id']] = $results;
+                        }
+                    }
+                }
+
+            }
+            // restore the original entity id
+            $this->data['entities_id'] = $entities_id;
+            // print_rr("in filter_by_company_fields function finally - entities_id {$this->data['entities_id']}"); 
+            // print_rr($items);
+            ksort( $items );
+            return $items;
+        }
     }
 
     public function filter_by_projects()
@@ -890,6 +939,29 @@ class core implements module
         }
     }
 
+    public function filter_entities()
+    {
+        // TODO filter to those entities which the user has access to
+        $entities_entity_id = $this->get_entity_id( 'entities' );
+        if ( $entities_entity_id > 0 )
+        {
+            $sql = "SELECT * FROM app_entity_{$entities_entity_id}";
+            $user_query = db_query( $sql );
+            $form_entities = array();
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                $include_field_id = $this->get_field_id( $entities_entity_id, 'include' );
+                if ( $results["field_$include_field_id"] == 'true' )
+                {
+                    $entity_id = $results['id'];
+                    $form_entities[$entity_id] = $results;
+                }
+            }
+            // print_rr($form_entities);
+            return $form_entities;
+        }
+    }
+    
     public function get_statuses()
     {
         if ( isset( $this->data['entities_id'] ) )
