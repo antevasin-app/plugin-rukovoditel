@@ -407,6 +407,34 @@ class core implements module
         }
     }
 
+    public static function get_entiity_fields_info( $type = false, $json = false )
+    {
+        $sql = "SELECT * FROM app_fields WHERE type LIKE 'fieldtype_$type'";
+        $user_query = db_query( $sql );
+        $fields_by_entity = $fields_by_id = $fields_by_type = $fields_by_name = array();
+        while (  $results = db_fetch_array( $user_query ) )
+        {
+            $fields_by_entity[$results['entities_id']][$results['id']] = $results;
+            $fields_by_entity_type[$results['entities_id']][$results['type']][$results['id']] = $results;
+            $fields_by_entity_name[$results['entities_id']][$results['name']][$results['id']] = $results;
+            $fields_by_id[$results['id']] = $results;
+            $fields_by_type[$results['type']][$results['id']] = $results;
+            $fields_by_name[$results['name']][$results['id']] = $results;
+        }
+        $fields = array( 
+            'entity' => array(
+                'id' => $fields_by_entity,
+                'type' => $fields_by_entity_type,
+                'name' => $fields_by_entity_name
+            ), 
+            'id' => $fields_by_id, 
+            'type' => $fields_by_type, 
+            'name' => $fields_by_name 
+        );
+        // print_rr($fields);
+        return ( $json ) ? json_encode( $fields ) : $fields;
+    }
+
     public function update_module_config( $config ) 
     {
         $module_name = strtoupper( $this->get_name() );
@@ -1755,6 +1783,12 @@ class core implements module
                     $( '#module_branches_' + module_name ).append( '<option value="' + branch_name + '" data-module="' + module_name + '" data-branch_zip_url="' + branch_zip_url + '" data-commit_sha="' + sha + '" data-commit_date="' + commit_date + '" data-commit_url="' + commit_url +'">' + branch_name + '</option>' );
                 }
                 let branch_commit_url = repos_url + source + '/commits/' + branch_name
+                let module_token = $( '#installed_module_' + module_name ).data( 'source_token' );
+                if ( module_token === '' ) {
+                    module_token = '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';
+                }
+                core.ajax_headers = {'Authorization': 'Bearer ' + module_token}
+                // console.log(branch_commit_url,module_name,module_token,private)
                 core.ajax_get( branch_commit_url, branch_commit_callback )
             })    
         }
@@ -1769,9 +1803,10 @@ class core implements module
                 $( '#latest_branch_' + module_name ).after( '<span class="install-warning">Module is set to private but no source token has been set</span>' );
                 return;
             }
-            if ( module_token !== '' ) {
-                core.ajax_headers = {'Authorization': 'token ' + module_token}
+            if ( module_token === '' ) {
+                module_token = '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';
             }
+            core.ajax_headers = {'Authorization': 'Bearer ' + module_token}
             // console.log(url,core.ajax_headers)
             let callback = function( response ) {
                 get_branches( response, module_name, private, source );

@@ -2,10 +2,11 @@
 
 namespace Antevasin;
 
-global $app_session_token;
+global $app_fields_cache, $app_session_token;
 
 $url = url_for( 'antevasin/core/', 'token=' . $app_session_token );
 $files_url = url_for( 'antevasin/core/files', 'token=' . $app_session_token );
+$entity_ajax_fields = core::get_entiity_fields_info( 'entity_ajax', true );
 
 ?>
 
@@ -118,15 +119,18 @@ var core = core || {
     ajax_get:function( url, done = this.console_response ) {
         let settings = {
             method: "GET",
-            url: url,
-            headers: core.ajax_headers
+            url: url
+        }
+        if ( Object.keys( core.ajax_headers ).length > 0 ) {
+            settings.headers = core.ajax_headers;
         }
         $.ajax( settings )
         .done( done )
         .fail( function( jqXHR, textStatus, errorThrown ) {
             // do something based on failure
             core.log_ajax_error( jqXHR, textStatus, errorThrown );
-        })
+        });
+        core.ajax_headers = {}
     },
     files:function( element ) {
         let action = $( element ).data( 'action' );
@@ -358,7 +362,7 @@ var core = core || {
             let url = `${core.url}&action=set_ajax_field_default&entities_id=${plugin.form.entities_id}&field_id=${field_id}`; 
             // console.log(url)
             let callback = function( response ) {
-                console.log(response);
+                // console.log(response);
                 if ( response != '' ) {
                     let response_obj = JSON.parse( response );
                     // console.log(response_obj);
@@ -444,7 +448,7 @@ var core = core || {
         field.trigger( 'change' );
     },    
     ajax_dropdown_trigger:function( fields_obj ) {
-        console.log('in ajax_dropdown_trigger',fields_obj);
+        // console.log('in ajax_dropdown_trigger',fields_obj);
         let trigger_field = $( `#fields_${fields_obj.trigger_field_id}` );
         let status_field_id = fields_obj.status_field_id;
         let status_field = $( `#fields_${status_field_id}` );
@@ -813,3 +817,7 @@ var maps = maps || {
 $( function() {
     core.expand_pre();
 });
+
+var entity = entity || {
+    ajax_fields: <?php echo $entity_ajax_fields ?>,
+}
