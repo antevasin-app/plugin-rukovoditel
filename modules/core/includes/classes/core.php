@@ -1845,7 +1845,8 @@ class core implements module
     }
 
     public function get_source_script()
-    {        
+    {      
+        $core_token = $this->config->token;
         $script = <<<SCRIPT
         const repos_url = `https://api.github.com/repos/`
         let modules = $( `.installed_modules` );
@@ -1864,8 +1865,8 @@ class core implements module
                 }
                 let branch_commit_url = repos_url + source + '/commits/' + branch_name
                 let module_token = $( '#installed_module_' + module_name ).data( 'source_token' );
-                if ( module_token === '' ) {
-                    module_token = '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';
+                if ( module_name === 'core' ) {
+                    module_token = '$core_token';
                 }
                 core.ajax_headers = {'Authorization': 'Bearer ' + module_token}
                 // console.log(branch_commit_url,module_name,module_token,private)
@@ -1883,8 +1884,8 @@ class core implements module
                 $( '#latest_branch_' + module_name ).after( '<span class="install-warning">Module is set to private but no source token has been set</span>' );
                 return;
             }
-            if ( module_token === '' ) {
-                module_token = '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';
+            if ( module_name === 'core' ) {
+                module_token = '$core_token';
             }
             core.ajax_headers = {'Authorization': 'Bearer ' + module_token}
             // console.log(url,core.ajax_headers)

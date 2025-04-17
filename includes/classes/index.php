@@ -105,7 +105,7 @@ class index
                 'field' => $this->get_repository_link()
             );
         } 
-        if ( $private )
+        if ( $private || $module_name == 'core' )
         {
             $tabs[0]['sections'][0]['groups'][] = array(
                 'field_class' => 'plugin-info',
