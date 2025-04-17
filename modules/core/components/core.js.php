@@ -183,17 +183,17 @@ var core = core || {
         return date.toLocaleDateString( 'en-US', options );
     },
     filter_status_field:function() {
-        // console.log('in filter_status_field function',plugin.form); 
+        console.log('in filter_status_field function',plugin.form); 
         if ( plugin.form.entities_id || plugin.form.sub_items ) {
-            // let url = `${core.url}&action=filter_status_field&entities_id=${plugin.form.entities_id}`;
+            let url = `${core.url}&action=filter_status_field&entities_id=${plugin.form.entities_id}`;
             let entities_id = ( plugin.form.sub_items ) ? plugin.form.sub_items.path : plugin.form.entities_id;
             let get_default_url = `${core.url}&action=filter_statuses&get_default=true&entities_id=${entities_id}`;
-            // console.log(get_default_url);
+            console.log(get_default_url);
             let get_default_callback = function( response ) {
-                // console.log('in get_default_callback function',response);
+                console.log('in get_default_callback function',response);
                 if ( response != '' ) {
                     let response_obj = JSON.parse( response );
-                    // console.log(response_obj);
+                    console.log(response_obj);
                     if ( response_obj.field_id && response_obj.default ) {
                         let field_id = response_obj.field_id;
                         console.log('field id',field_id,$( `#btn_submodal_edit_item_${field_id}` ));
@@ -203,16 +203,16 @@ var core = core || {
                             core.get_status_field_value_info( field_id );
                         });
                         if ( status_field.val() === null ) {
-                            // console.log('status field has no value');
+                            console.log('status field has no value');
                             $.each( response_obj.default, function( index, option_obj ) {
                                 core.set_ajax_dropdown_value( option_obj );                                
                             });
                         } else {
-                            // console.log('status field already has a value',field_id,status_field,'status field value',status_field.val());
+                            console.log('status field already has a value',field_id,status_field,'status field value',status_field.val());
                             core.get_status_field_value_info( field_id );
                         }
                         let ajax_dropdown_callback = function( response ) {
-                            // console.log('in ajax_dropdown_callback function',response);
+                            console.log('in ajax_dropdown_callback function',response);
                         }
                         let ajax_dropdown_url = `${core.url}&action=filter_statuses&entities_id=${plugin.form.entities_id}`;
                         core.set_ajax_dropdown( {url:ajax_dropdown_url,field_id:field_id,ajax_dropdown_callback} );
@@ -430,7 +430,7 @@ var core = core || {
         })
     },
     set_ajax_dropdown_value:function( option_obj ) {
-        // console.log(option_obj);
+        console.log('option object',option_obj);
         let options = new Option( option_obj.text, option_obj.id, false, false );
         let field = $( `#fields_${option_obj.field_id}` );
         field.append( options ).trigger( 'change' );
