@@ -29,8 +29,34 @@ var plugin = plugin || {
     on_modal_load:function( form ) {
         // console.log('on modal load',form)
         this.form_element = form;
-        this.get_form();   
-        this.load_modal_form_js();
+        // console.log('plugin form',plugin.form)
+        if ( Object.keys( plugin.form ).length === 0 ) {
+            this.get_form();
+            this.load_modal_form_js();
+        }
+    },
+    on_submodal_load:function( submodal ) {
+        // console.log('on submodal load')
+        let sub_items_form = $( '#sub_items_form' );
+        // console.log('sub items form',sub_items_form)
+        plugin.wait_until_exists( '#sub_items_form' ).then( function( element ) {
+            // console.log('sub items form exists',element)
+            let form = $( element );
+            let hidden_input_elements = form.find('.form-body').find( 'input[type="hidden"]' );
+            let info = { "action_url":form.prop( 'action' ) };
+            $.each( hidden_input_elements, function( index, element ) {
+                // console.log(index,element)
+                let input = $( element );
+                let value = input.val();
+                info[input.prop( 'id' )] = input.val();
+            });   
+            // console.log(info)     
+            plugin.form['sub_items'] = info;
+            if ( info.path ) {
+                // console.log('sub items form path',info.path)
+                plugin.run_function( `entity_${info.path}` );
+            } 
+        })
     },
     get_entities_info:function( path ) {
         let paths = path.split( '/' );
@@ -67,6 +93,7 @@ var plugin = plugin || {
                 // console.log('prepare_add_item_form url',url)
                 core.ajax_get( url, callback );
                 plugin.wait_until_exists( '#items_form' ).then( function( element ) {
+                    console.log('in load modal form js wait until exists function about to run on_modal_load')
                     plugin.on_modal_load( $( '#items_form' ) );
                 });
                 return;
@@ -75,7 +102,8 @@ var plugin = plugin || {
                 js = `process_${this.form['process_id']}`;
                 break;
             case 'items_form':
-                js = `entity_${entities_id}`
+                js = `entity_${entities_id}`;
+                this.run_function( 'items_form' );
                 break;
             default:
                 js = 'no function to run'
@@ -102,7 +130,8 @@ var plugin = plugin || {
         core.ajax_get( url, callback );
     },
     get_form:function() {
-        // console.trace();
+        plugin.form = {}
+        // console.log('in get_form function',plugin.form)
         // let action = ( $( '#export-form' ).length > 0 ) ? $( 'form' ).prop( 'action' ) : this.form_element.prop( 'action' );
         // console.log('action',action,'form element',this.form_element); 
         let page_url = window.location.href;
@@ -127,8 +156,9 @@ var plugin = plugin || {
         info['method']= this.form_element.prop( 'method' );
         this.form['info'] = info;
         this.get_form_hidden_inputs();
+        core.get_url_params();
         core.get_form_url_params();
-        // console.log('in get_form functionn - this.form is ',this.form)
+        console.log('in get_form functionn - this.form is ',this.form.path)
     },
     get_form_hidden_inputs:function() {
         let obj = this;
@@ -165,6 +195,7 @@ var plugin = plugin || {
             $( selector ).on( 'show.bs.modal', function() {
                 // console.log('modal show event')
                 let modal_form = $( selector + ' form' );
+                // console.log('in wait until exists function and then plugin.wait_until_exists .then function about to run on_modal_load')
                 if ( modal_form.length > 0 ) plugin.on_modal_load( modal_form );
             });
             $( '.btn-process-button-dropdown' ).on( 'click', function() {
@@ -173,11 +204,12 @@ var plugin = plugin || {
                 // $( this ).off( 'click' );
             })
             $( selector ).on( 'shown.bs.modal', function() {
-                console.log('modal shown event')
+                // console.log('modal shown event')
                 // plugin.wait_until_modal_exists( 'ajax-modal' );                
             });
             $( selector ).on( 'hidden.bs.modal', function() {
-                // console.log('modal hidden event')
+                console.log('modal hidden event')
+                plugin.form = {}
                 setTimeout( plugin.wait_until_modal_exists, 500, 'ajax-modal' )
             });
         });  
@@ -225,6 +257,7 @@ $( function() {
             $( '#ajax-modal' ).on( 'show.bs.modal', function( e ) {
                 // console.log('default button modal show event')
                 let modal_form = $( '#ajax-modal form' );
+                console.log(`in page load wait until exists .then function in btn-default on click and then ajax-modal on show about to run on_modal_load if modal_form.length > 0 - the value of it is ${modal_form.length}`)
                 if ( modal_form.length > 0 ) plugin.on_modal_load( modal_form );
             });
         });

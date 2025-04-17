@@ -289,6 +289,11 @@ var core = core || {
         for( const param of search_params ) {
             params[param[0]] = param[1];
         }
+        if ( params.path ) {
+            if ( typeof plugin.form.path === 'undefined' ) {
+                plugin.form['path'] = params.path;
+            } 
+        }
         return params;
     },
     get_status_field_value_info:function( field_id ) {

@@ -375,10 +375,18 @@ class core implements module
 
     protected function get_field_id( $entity_id, $field_name )
     {
-        $sql = "SELECT * FROM app_fields WHERE name='$field_name' AND entities_id=$entity_id";
+        $sql = "SELECT * FROM app_fields WHERE name LIKE '$field_name' AND entities_id=$entity_id";
         if ( $result = db_fetch_array( db_query( $sql ) ) )
         {
             return $result['id'];
+        }
+        else
+        {
+            $sql = "SELECT * FROM app_fields WHERE name LIKE '%$field_name' AND entities_id=$entity_id";
+            if ( $result = db_fetch_array( db_query( $sql ) ) )
+            {
+                return $result['id'];
+            }
         }
     }
 
@@ -1286,7 +1294,8 @@ class core implements module
             $statuses_system_field_id = $this->get_field_id( $statuses_entity_id, 'system status' );
             $filter_status_field_id = $this->get_field_id( $filter_entity_id, 'status' );
             $status_heading_field_id = \fields::get_heading_id( $statuses_entity_id );
-            $statuses = $this->filter_by_companies();  
+            $statuses = $this->filter_by_companies();
+            // print_rr($statuses);  
             $get_default = ( isset( $this->data['get_default'] ) && $this->data['get_default'] ) ? true : false;
             // get system statuses for the filter entity
             $sql = "SELECT * FROM app_entity_$statuses_entity_id WHERE FIND_IN_SET( $filter_entity_id, field_$statuses_forms_field_id ) AND field_$statuses_system_field_id='true'";
@@ -1582,6 +1591,77 @@ class core implements module
             $this->config = $proposed_config;
             $this->set_module_config();
         }
+    }
+
+    protected function get_company_details( $data )
+    {
+        // print_rr($data);
+        $companies_query = db_fetch_all( "app_entity_60" );
+        $companies = array();
+        while ( $results = db_fetch_array( $companies_query ) )
+        {
+            $companies[$results['id']] = $results;
+        }
+        $job_companies = empty( $data['company_ids'] ) ? array() : explode( ',', $data['company_ids'] );
+        // print_rr($job_companies);
+        $html = '';
+        foreach ( $job_companies as $company_id )
+        {
+            $company = $companies[$company_id];
+            // print_rr($company);
+            switch ( $data['setting'] )
+            {
+
+                case 'job_card_header':
+                    $field = 'field_1132';
+                    break;
+                case 'job_card_footer':
+                    $field = 'field_1135';
+                    break;
+                default:
+                    break;
+            }
+            if ( $company['field_1139'] && empty( $company[$field] ) ) 
+            {
+                $parent_company_id = $company['field_1128'];
+                if ( !empty( $parent_company_id ) )     
+                {
+                    $parent_company = $companies[$parent_company_id];
+                    $html .= <<<HEADER
+                    <div id="job_card_header" class="job-card">{$parent_company[$field]}</div>
+                    HEADER;
+                }
+            }
+            else
+            {
+                $html .= <<<HEADER
+                <div id="job_card_header" class="job-card">{$company[$field]}</div>
+                HEADER;
+                // print_rr($header_html);
+            }
+        }
+        return $html;
+    }
+
+    protected function get_export_template_html( $templates_id )
+    {
+        $current_path = "{$this->items_info['entities_id']}-{$this->items_info['items_id']}";
+        return \export_templates::get_html( $this->items_info['entities_id'], $this->items_info['items_id'], $templates_id );
+    }
+
+    protected function get_customer_details()
+    {
+        return $this->get_export_template_html( 3 );
+    }
+
+    protected function get_address_details()   
+    {
+        return $this->get_export_template_html( 4 );
+    }
+
+    protected function get_item_comments()
+    {
+        return $this->get_export_template_html( 7 );
     }
 
     public function get_reports_info()
@@ -2032,10 +2112,12 @@ class core implements module
             $entity_id = $path; 
             $items_id = '';
         }
-        return array( 'entities_id' => $entity_id, 'items_id' => $items_id );    
+        $items_info = array( 'entities_id' => $entity_id, 'items_id' => $items_id ); 
+        $this->items_info = $items_info;
+        return $items_info;    
     }
 
-    public  function get_full_path( $path )
+    public function get_full_path( $path )
     {
         if ( strpos( $path, '-' ) )
         {
