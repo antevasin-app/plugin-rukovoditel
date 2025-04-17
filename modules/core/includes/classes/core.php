@@ -2113,6 +2113,7 @@ class core implements module
             $entity_id = $path; 
             $items_id = '';
         }
+        print_rr($entity_id); print_rr($items_id);
         $items_info = array( 'entities_id' => $entity_id, 'items_id' => $items_id ); 
         $this->items_info = $items_info;
         return $items_info;    
