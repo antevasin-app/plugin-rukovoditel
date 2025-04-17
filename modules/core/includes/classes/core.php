@@ -2100,6 +2100,7 @@ class core implements module
 
     public function get_items_info( $path, $level = 0 )
     {
+        print_rr($path);
         if ( !empty( $path ) && strpos( $path, '-' ) )
         {
             $path_array = explode( '/', $this->get_full_path( $path ) );
