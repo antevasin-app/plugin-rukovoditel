@@ -2101,7 +2101,6 @@ class core implements module
 
     public function get_items_info( $path, $level = 0 )
     {
-        print_rr($path);
         if ( !empty( $path ) && strpos( $path, '-' ) )
         {
             $path_array = explode( '/', $this->get_full_path( $path ) );
@@ -2114,7 +2113,6 @@ class core implements module
             $entity_id = $path; 
             $items_id = '';
         }
-        print_rr($entity_id); print_rr($items_id);
         $items_info = array( 'entities_id' => $entity_id, 'items_id' => $items_id ); 
         $this->items_info = $items_info;
         return $items_info;    
