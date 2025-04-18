@@ -70,9 +70,11 @@ class form
     {
         foreach ( $this->tabs as $index => $tab ) 
         {
-            $active_tab = ( $index == 0 ) ? 'active' : '';
-            $active_content = ( $index == 0 ) ? 'active in' : '';
+            // $active_tab = ( $index == 0 ) ? 'active' : '';
+            // $active_content = ( $index == 0 ) ? 'active in' : '';
             $tab_name = $tab['name'];
+            $active_tab = ( $tab_name == 'module' ) ? 'active' : '';
+            $active_content = ( $tab_name == 'module' ) ? 'active in' : '';
             $tab_description = ( isset( $tab['description'] ) ) ? $tab['description'] : '';
             $tab_title = ( isset( $tab['title'] ) ) ? $tab['title'] : $tab_name;
             if ( isset( $tab['format'] ) && function_exists( $tab['format'] ) )

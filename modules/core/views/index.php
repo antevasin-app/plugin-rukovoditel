@@ -24,6 +24,17 @@ $core_module_tabs = array(
                     )
                 )
             ),
+            array(
+                'title' => 'Rukovoditel Extension',
+                // 'id' => 'testing',
+                'groups' => array(
+                    array(
+                        'field_class' => 'plugin-info',
+                        'label' => 'Key',
+                        'field' => CFG_PLUGIN_EXT_LICENSE_KEY
+                    )
+                )
+            ),
         )
     ),
 );
