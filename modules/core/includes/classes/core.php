@@ -1423,10 +1423,10 @@ class core implements module
     public function populate_contact_fields()
     {
         // print_rr($this->data);
-        if ( isset( $this->data['field_id'] ) && isset( $this->data['items_id'] ) )
+        if ( isset( $this->data['field_id'] ) && isset( $this->data['items_ids'] ) )
         {
             $this->items_info['entities_id'] = $this->get_field_entity_id( $this->data['field_id'] );
-            $this->items_info['items_id'] = $this->data['items_id'];
+            $this->items_info['items_ids'] = $this->data['items_ids'];
             $customer_info = $this->get_customer_info();
         }
     }
@@ -1436,59 +1436,72 @@ class core implements module
         if ( !empty( $this->items_info ) )
         {
             // print_rr($this->data); print_rr($this->items_info);
-            $sql = "
-                SELECT * 
-                FROM app_entity_{$this->items_info['entities_id']} 
-                WHERE id={$this->items_info['items_id']}
-            ";
+            // $sql = "
+            //     SELECT * 
+            //     FROM app_entity_{$this->items_info['entities_id']} 
+            //     WHERE id={$this->items_info['items_id']}
+            // ";
             $entities_id = $this->items_info['entities_id'];
             $addresses_field_id = $this->get_field_id( $entities_id, 'addresses' );
             $contacts_field_id = $this->get_field_id( $entities_id, 'contacts' );
             $emails_field_id = $this->get_field_id( $entities_id, 'email addresses' );
             $phone_numbers_field_id = $this->get_field_id( $entities_id, 'contact phone numbers' );
-            $items_id = $this->items_info['items_id'];
-            if ( empty( $items_id ) )
+            $items_ids = explode( ',', $this->items_info['items_ids'] );
+            // print_rr($items_ids);
+            $customer_info['ids'] = $this->items_info['items_ids'];
+            foreach ( $items_ids as $index => $items_id )
             {
-                $customer_info['fields'][$addresses_field_id] = '';
-                $customer_info['fields'][$contacts_field_id] = '';
-                $customer_info['fields'][$emails_field_id] = '';
-                $customer_info['fields'][$phone_numbers_field_id] = '';
-            }
-            else
-            {
-                $sql = "
-                    SELECT 
-                        customers.*, addresses.id AS addresses_id, addresses.*, 
-                        contacts.id AS contacts_id, contacts.*, 
-                        emails.id AS emails_id, emails.*, 
-                        phone_numbers.id AS phone_numbers_id, phone_numbers.* 
-                    FROM app_entity_63 AS customers
-                    LEFT JOIN app_entity_32 AS addresses
-                    ON FIND_IN_SET( addresses.id, customers.field_1207 )
-                    LEFT JOIN app_entity_38 AS contacts
-                    ON FIND_IN_SET( contacts.id, customers.field_1206 )
-                    LEFT JOIN app_entity_50 AS emails
-                    ON FIND_IN_SET( emails.id, customers.field_1209 )
-                    LEFT JOIN app_entity_39 AS phone_numbers
-                    ON FIND_IN_SET( phone_numbers.id, customers.field_1212 )
-                    WHERE customers.id IN ( $items_id );
-                ";
-                // print_rr($sql);
-                $user_query = db_query( $sql );
-                while ( $result = db_fetch_array( $user_query ) )
+                if ( empty( $items_id ) )
                 {
-                    // print_rr($result);
-                    $customer_info['id'] = $result['id'];
-                    $addresses_heading_field_id = \fields::get_heading_id( 32 );
-                    $customer_info['fields'][$addresses_field_id][$result['addresses_id']] = $result["field_$addresses_heading_field_id"];
-                    $contacts_heading_field_id = \fields::get_heading_id( 38 );
-                    $customer_info['fields'][$contacts_field_id][$result['contacts_id']] = $result["field_$contacts_heading_field_id"];
-                    $emails_heading_field_id = \fields::get_heading_id( 50 );
-                    $customer_info['fields'][$emails_field_id][$result['emails_id']] = $result["field_$emails_heading_field_id"];
-                    $phone_numbers_heading_field_id = \fields::get_heading_id( 39 );
-                    $customer_info['fields'][$phone_numbers_field_id][$result['phone_numbers_id']] = $result["field_$phone_numbers_heading_field_id"];
+                    $customer_info['fields'][$addresses_field_id] = '';
+                    $customer_info['fields'][$contacts_field_id] = '';
+                    $customer_info['fields'][$emails_field_id] = '';
+                    $customer_info['fields'][$phone_numbers_field_id] = '';
                 }
-                // print_rr($customer_info);
+                else
+                {
+                    $sql = "
+                        SELECT 
+                            customers.*, addresses.id AS addresses_id, addresses.*, 
+                            contacts.id AS contacts_id, contacts.*, 
+                            emails.id AS emails_id, emails.*, 
+                            phone_numbers.id AS phone_numbers_id, phone_numbers.* 
+                        FROM app_entity_63 AS customers
+                        LEFT JOIN app_entity_32 AS addresses
+                        ON FIND_IN_SET( addresses.id, customers.field_1207 )
+                        LEFT JOIN app_entity_38 AS contacts
+                        ON FIND_IN_SET( contacts.id, customers.field_1206 )
+                        LEFT JOIN app_entity_50 AS emails
+                        ON FIND_IN_SET( emails.id, customers.field_1209 )
+                        LEFT JOIN app_entity_39 AS phone_numbers
+                        ON FIND_IN_SET( phone_numbers.id, customers.field_1212 )
+                        WHERE customers.id=$items_id;
+                    ";
+                    // $sql = "
+                    //     SELECT customers.id AS customers_id, customers.*, addresses.id AS addresses_id, addresses.* 
+                    //     FROM app_entity_63 AS customers 
+                    //     LEFT JOIN app_entity_32 AS addresses
+                    //     ON FIND_IN_SET( addresses.id, customers.field_1207 )
+                    //     WHERE customers.id=$items_id
+                    // ";
+                    // print_rr($sql); 
+                    // print_rr($customer_info);
+                    $user_query = db_query( $sql );
+                    while ( $results = db_fetch_array( $user_query ) )
+                    {
+                        // print_rr($results);
+                        // $customer_info['ids'] = $results['customers_id'];
+                        $addresses_heading_field_id = \fields::get_heading_id( 32 );
+                        if ( !empty( $results['addresses_id'] ) ) $customer_info['fields'][$addresses_field_id][$results['addresses_id']] = $results["field_$addresses_heading_field_id"];
+                        $contacts_heading_field_id = \fields::get_heading_id( 38 );
+                        if ( !empty( $results['contacts_id'] ) ) $customer_info['fields'][$contacts_field_id][$results['contacts_id']] = $results["field_$contacts_heading_field_id"];
+                        $emails_heading_field_id = \fields::get_heading_id( 50 );
+                        if ( !empty( $results['emails_id'] ) ) $customer_info['fields'][$emails_field_id][$results['emails_id']] = $results["field_$emails_heading_field_id"];
+                        $phone_numbers_heading_field_id = \fields::get_heading_id( 39 );
+                        if ( !empty( $results['phone_numbers_id'] ) ) $customer_info['fields'][$phone_numbers_field_id][$results['phone_numbers_id']] = $results["field_$phone_numbers_heading_field_id"];
+                    }
+                    // print_rr($customer_info);
+                }
             }
             echo '{"success":"in core module get_customer_info function","data":' . json_encode( $customer_info ) . '}';                  
         }
