@@ -738,6 +738,13 @@ class core implements module
         $user_companies = $this->get_user_companies();
         if ( !empty( $user_companies ) )
         {
+            $sql = "SELECT * FROM app_entity_60 WHERE created_by={$this->user_id} AND FIND_IN_SET( id, '$user_companies' )";
+            $user_query = db_query( $sql );
+            $users = array();
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                $users[$this->user_id] = array();
+            }
             $sql = "
                 SELECT users.* 
                 FROM app_related_items_1_60 AS related
@@ -747,7 +754,6 @@ class core implements module
             ";
             // print_rr($sql);
             $user_query = db_query( $sql );
-            $users = array();
             while ( $results = db_fetch_array( $user_query ) )
             {
                 // print_rr($results); 
@@ -829,6 +835,7 @@ class core implements module
             $status_entity_id = $this->get_entity_id( 'statuses' );         
             $user_companies = $this->get_user_companies();
             $companies_users = $this->get_companies_users(); 
+            // print_rr($user_companies); print_rr($companies_users);
             $values = $join = $system_entity_fields = $entity_user_fields_sql = $form_filter_sql = '';
             $excluded_fields = array( 'attachments' );
             if ( isset( $this->data['field_id'] ) && !in_array( $this->data['field_id'], $excluded_fields ) ) 
