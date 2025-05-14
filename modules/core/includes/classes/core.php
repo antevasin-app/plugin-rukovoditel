@@ -337,14 +337,6 @@ class core implements module
 
     // entity functions
 
-    protected function get_entities()
-    {
-        global $app_entities_cache;
-        
-        $this->entities = $app_entities_cache;
-        return $this->entities;
-    }
-
     protected function get_entity_id( $entity_name )
     {
         $sql = "SELECT * FROM app_entities WHERE name='$entity_name'";
@@ -399,6 +391,14 @@ class core implements module
         }
     }
 
+    public function get_entities( $json = false )
+    {
+        global $app_entities_cache;
+        
+        $this->entities = $app_entities_cache;
+        return ( $json ) ? json_encode( $app_entities_cache ) : $app_entities_cache;
+    }
+
     public function get_entity_fields()
     {
         if ( isset( $this->data['entities_id'] ) )
@@ -415,7 +415,7 @@ class core implements module
         }
     }
 
-    public static function get_entiity_fields_info( $type = false, $json = false )
+    public function get_entiity_fields_info( $type = false, $json = false )
     {
         $sql = "SELECT * FROM app_fields WHERE type LIKE 'fieldtype_$type'";
         $user_query = db_query( $sql );
@@ -777,12 +777,17 @@ class core implements module
 
     public function get_records_visibility_sql( $function, $args = array() )
     {
+        global $app_action;
+
         // print_rr($function); print_rr($args);
         $function_items = $this->$function( ...$args );  
+        // print_rr($function_items);
+        if ( in_array( $app_action, array( 'form_single_field' ) ) ) return 1;
         $items = ( empty( $function_items ) ) ? array( 0 ) : array_keys( $function_items ); ;
         // print_rr('items in get_records_visibility_sql'); print_rr($items);
         if ( empty( $items ) ) return;
         $sql = "e.id IN ( " . db_input_in( $items ) . " )";
+        // die(print_rr($sql));
         return $sql;
     }
 
@@ -817,6 +822,7 @@ class core implements module
     {
         global $app_module_path, $app_module, $app_action;
 
+        // print_rr('in filter_by_companies function');
         if ( isset( $this->data['entities_id'] ) )
         {
             $entities_id = $this->data['entities_id'];
@@ -859,7 +865,11 @@ class core implements module
             }
             else
             {
-                // print_rr("entities id is $entities_id - user company ids are $user_companies");
+                // print_rr("entities id is $entities_id - user company ids are $user_companies - companies users are $companies_users");
+                // print_rr("values sql is $values");
+                // print_rr("system entitiy fields sql is $system_entity_fields");
+                // print_rr("entity user fields sql is $entity_user_fields_sql");
+                // print_rr("form filter sql is $form_filter_sql");
                 $sql = "
                     SELECT e.* 
                     FROM app_entity_{$entities_id} AS e
@@ -871,6 +881,7 @@ class core implements module
                         $entity_user_fields_sql
                         $form_filter_sql
                 "; 
+                // print_rr($sql);
                 $user_query = db_query( $sql );
                 $items = array();
                 while ( $results = db_fetch_array( $user_query ) )
@@ -879,24 +890,19 @@ class core implements module
                 }
                 // print_rr($items); print_rr("entities id: $entities_id, status entity id: $status_entity_id");
                 $this->items = $items;
-                // print_rr($app_action); die(print_rr($this->data));
-                if ( $entities_id == $status_entity_id && in_array( $app_action, array( 'select2_entities_filter', 'select2_json' ) ) )
-                {
-                    // die(print_rr('in select2_entities_filter function'));
-                    $this->select2_statuses_filter();
-                    exit();
-                } 
+                // print_rr($app_action); die(print_rr($this->items));
                 // print_rr($app_action); print_rr($this->data);
                 if ( $app_action == 'select2_json' )
                 {
-                    // die(print_rr('in select2_json function'));
-                    $this->dialog_filter();
+                    // print_rr('in filter_by_companies function - app action select2_json');
+                    $this->select2_filter();
                     exit();
                 } 
-                if ( $app_action == 'form_single_field' )
+                if ( $app_action == 'select2_entities_filter' )
                 {
-                    $items = array();
-                    // die(print_rr("form_single_field"));
+                    // print_rr('in filter_by_companies function - app action select2_entities_filter');
+                    $this->select2_filter();
+                    exit();
                 }
                 // print_rr($items); 
                 ksort( $items );
@@ -1048,13 +1054,133 @@ class core implements module
     {
         if ( isset( $this->data['form_data'] ) )
         {
+            // print_rr($this->data);
             $inputs = array();
             foreach ( $this->data['form_data'] as $index => $form_data )
             {
                 $inputs[$form_data['name']] = $form_data['value'];
+
+                if ( str_ends_with( $form_data['name'], '_url' ) && ! empty( $form_data['value'] ) )
+                {
+                    $url_parts = parse_url( $form_data['value'] );
+                    if ( isset( $url_parts['query'] ) )
+                    {
+                        parse_str( $url_parts['query'], $query_params );
+    
+                        foreach ( $query_params as $key => $value )
+                        {
+                            $inputs[$key] = $value;
+                        }
+    
+                        if ( isset( $query_params['action'] ) && isset( $query_params['id'] ) )
+                        {
+                            $inputs['process_id'] = $query_params['id'];
+                            unset( $inputs['id'] );
+                        }
+                    }
+                }
             }
+            // print_rr($inputs);
             $this->data['inputs'] = $inputs;
         }
+    }
+
+    /**
+     * adds any additional system items to the $this->items array
+     */
+    public function select2_filter()
+    {
+        global $app_action;
+
+        // print_rr('in select2_filter function');
+        // print_rr($this->items);
+        switch ( $app_action )
+        {
+            case 'select2_json':
+                $forms_entity_id = $this->get_field_entity_id( $this->data['field_id'] );
+                $field_entity_id = $this->data['entity_id'];
+                break;
+            case 'select2_entities_filter':
+                $forms_entity_id = $this->data['entity_id'];
+                $field_entity_id = $this->data['entities_id'];
+                break;
+            default:
+                die(print_rr('default app_action in core module select2_filter'));
+                break;
+        }
+        $field_id = $this->data['field_id'];
+        $forms_field_id = $this->get_field_id( $field_entity_id, 'forms' );
+        $actions_field_id = $this->get_field_id( $field_entity_id, 'actions' );
+        $system_status_field_id = $this->get_field_id( $field_entity_id, 'system status' );
+        $admin_status_field_id = $this->get_field_id( $field_entity_id, 'admin status' );
+        $this->get_form_data();
+        $filter_id = $forms_entity_id;
+        $filter_field_id = $forms_field_id;
+        if ( !empty( $actions_field_id )  )
+        {
+            $process_id = $this->data['inputs']['process_id'];
+            $filter_id = $process_id; // dependent on whether we are using forms_field_id or actions_field_id sql 
+            $filter_field_id = $actions_field_id; // dependent on whether we are using forms_field_id or actions_field_id sql 
+            // print_rr("process id is $process_id - filter id is $filter_id - filter field id is $filter_field_id");
+        }  
+        $where_sql_and = $where_sql_or = array();
+        // print_rr("forms entity id is $forms_entity_id - forms status field id is $forms_field_id");
+        // print_rr("action process id is $process_id actions field id is $actions_field_id");
+        // print_rr("system status field id is $system_status_field_id");
+        // print_rr("admin status field id is $admin_status_field_id");
+        // print_rr($this->data);        
+        // $actions_field_sql = ( empty( $actions_field_id ) ) ? "" : "OR FIND_IN_SET( $process_id, field_$actions_field_id )";
+        // $find_in_set_sql = ( empty( $actions_field_id ) ) ? "FIND_IN_SET( $forms_entity_id, field_$forms_field_id )" : "FIND_IN_SET( $process_id, field_$actions_field_id )";
+        // $system_status_sql = ( empty( $system_status_field_id ) ) ? "" : "AND field_$system_status_field_id='true'";
+        // $admin_status_sql = ( empty( $admin_status_field_id ) ) ? "" : ( ( true ) ? "" : "AND field_$admin_status_field_id='true'" );
+        // $sql = "SELECT * FROM app_entity_$field_entity_id WHERE $find_in_set_sql $system_status_sql $admin_status_sql";
+        // if ( !empty( $actions_field_id ) ) $where_sql_and[] = "FIND_IN_SET( $process_id, field_$actions_field_id )";
+        // $where_sql_and[] = ( empty( $actions_field_id ) ) ? "FIND_IN_SET( $forms_entity_id, field_$forms_field_id )" : "FIND_IN_SET( $process_id, field_$actions_field_id )";
+        if ( $forms_field_id > 0 )
+        {
+            $where_sql_and[] = "FIND_IN_SET( $forms_entity_id, field_$forms_field_id )";
+        }
+        if ( $actions_field_id > 0 )
+        {
+            $sql = "FIND_IN_SET( $process_id, field_$actions_field_id )";
+            if ( empty( $where_sql_and ) )
+            {
+                array_push( $where_sql_and, $sql );
+            } 
+            else
+            {
+                $where_sql_or = $where_sql_and;
+                unset( $where_sql_and );
+                array_push( $where_sql_or, $sql );
+            }
+        }
+        if ( !empty( $system_status_field_id ) ) $where_sql_or[] = "field_$system_status_field_id='true'";
+        // if ( !empty( $admin_status_field_id ) ) $where_sql_or[] = "field_$admin_status_field_id='true'";
+        // print_rr($where_sql_and);
+        // print_rr($where_sql_or);
+        if ( !empty( $where_sql_or ) )
+        {
+            $where_and = ( empty( $where_sql_and ) ) ? '' : implode( ' AND ', $where_sql_and );            
+            $where_or = ( empty( $where_sql_or ) ) ? '' : ( ( empty( $where_and ) ) ? implode( ' OR ', $where_sql_or ) : 'AND ' . implode( ' OR ', $where_sql_or ) );
+            // $where_or = implode( ' OR ', $where_sql_or );
+            // $sql = "SELECT * FROM app_entity_$field_entity_id WHERE $where_and AND ( $where_or )";
+            $sql = "SELECT * FROM app_entity_$field_entity_id WHERE $where_and $where_or";
+            // print_rr($sql);
+            $user_query = db_query( $sql );
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                $this->items[$results['id']] = $results;
+            }
+            // die(print_rr($this->items));
+
+        }
+        $this->data['field_entity_id'] = $field_entity_id;
+        // $this->data['filter_id'] = $forms_entity_id;
+        $this->data['filter_id'] = $filter_id;
+        // $this->data['filter_field_id'] = $forms_field_id; 
+        $this->data['filter_field_id'] = $filter_field_id; 
+        // print_rr($this->items);
+        echo $this->get_select2_options();              
     }
 
     public function select2_statuses_filter()
@@ -1086,6 +1212,7 @@ class core implements module
         $this->data['field_entity_id'] = $field_entity_id;
         $this->data['filter_entity_id'] = $forms_entity_id;
         $this->data['filter_field_id'] = $forms_field_id;
+        // print_rr($this->data);
         // switch ( $this->data['form_type'] )
         // {
         //     case 'items/processes':
@@ -1113,88 +1240,6 @@ class core implements module
         echo $this->get_select2_options();
     }
 
-    protected function dialog_filter()
-    {
-        // print_rr('in dialog_filter function');  
-        $this->get_form_data();
-        // print_rr($this->items); print_rr($this->data); 
-        if ( isset( $this->data['form_type'] ) )  
-        {
-            switch ( $this->data['form_type'] )
-            {
-                case 'items/processes':
-                    if ( isset( $this->data['inputs']['form_url'] ) )
-                    {
-                        $url_parts = parse_url( $this->data['inputs']['form_url'] );
-                        parse_str( $url_parts['query'], $params );
-                        // print_rr($params);
-                        if ( isset( $params['action'] ) && isset( $params['id'] )  )
-                        {
-                            $field_entity_id = $this->data['entity_id'];
-                            $this->data['field_entity_id'] = $field_entity_id;
-                            $this->data['filter_entity_id'] = $params['id'];
-                            $this->data['filter_field_id'] = $this->get_field_id( $field_entity_id, 'actions' );
-                        }
-                    }
-                    break;
-                case 'items/form':
-                    // print_rr('items/form form_type in core module dialog_filter function');
-                    // print_rr($this->data);
-                    $this->data['field_entity_id'] = $this->data['entity_id'];
-                    break;
-                default:
-                    break;  
-            }
-            echo $this->get_select2_options();
-        } 
-    }
-
-    protected function get_select2_options()
-    {
-        // print_rr("in get_select2_options function - field entity id {$this->data['field_entity_id']} - entities id {$this->data['entities_id']}");
-        $entities_id = $this->data['entities_id'];
-        if ( isset( $this->data['sql'] )  )
-        {
-            $user_query = db_query( $this->data['sql'] );
-            while ( $results = db_fetch_array( $user_query ) )
-            {
-                $this->items[$results['id']] = $results;
-            }
-        }
-        $heading_field_id = \fields::get_heading_id( $entities_id );
-        uasort( $this->items, function ( $a, $b ) use ( $heading_field_id )
-        {
-            return strcmp( $a["field_$heading_field_id"], $b["field_$heading_field_id"] );
-        });
-        $options = array();
-        foreach ( $this->items as $items_id => $item )
-        {
-            if ( ( isset( $this->data['filter_entity_id'] ) && isset( $this->data['filter_field_id'] ) ) && !in_array( $this->data['filter_entity_id'], explode( ',', $item["field_{$this->data['filter_field_id']}"] ) ) ) continue;
-            $heading_value = \items::get_heading_field_value( $heading_field_id, $item );
-            $item['heading'] = $heading_value;
-            // print_rr($this->data);
-            if ( isset( $this->data['prepare_add_item'] ) ) 
-            {
-                $form_entity_id = $this->data['form_entity_id'];
-                $items_id = "$entities_id-$items_id/$form_entity_id";
-            }
-            // print_rr($items_id);
-            $option = array( 'id' => $items_id, 'text' => $heading_value, 'html' => '<div>' . $heading_value . '</div>' );
-            if ( $this->get_default ) $option['field_id'] = $field_id;
-            $options[] = $option;
-        }
-        if ( $this->get_default )
-        {                
-            $response = array( 'field_id' => $status_field_id, 'default' => $options );
-        } 
-        else
-        {
-            $response = array( 'results' => $options );
-        }
-        return json_encode( $response );
-        
-    }
-
     public function select2_statuses_filter_()
     {
         global $app_action;
@@ -1219,7 +1264,7 @@ class core implements module
         $forms_field_id = $this->get_field_id( $filter_entity_id, 'forms' );
         $system_status_field_id = $this->get_field_id( $filter_entity_id, 'system status' );
         $this->get_form_data();
-        print_rr($this->data);
+        // print_rr($this->data);
         $status_sql = "SELECT * FROM app_entity_$filter_entity_id WHERE FIND_IN_SET( $forms_entity_id, field_$forms_field_id )";
         switch ( $this->data['form_type'] )
         {
@@ -1292,6 +1337,94 @@ class core implements module
             $response = array( 'results' => $options );
         }
         echo json_encode( $response );
+    }
+
+    protected function dialog_filter()
+    {
+        // print_rr('in dialog_filter function');  
+        $this->get_form_data();
+        // print_rr($this->items); print_rr($this->data); 
+        if ( isset( $this->data['form_type'] ) )  
+        {
+            switch ( $this->data['form_type'] )
+            {
+                case 'items/processes':
+                    // print_rr("process form_type in core module dialog_filter function");
+                    if ( isset( $this->data['inputs']['form_url'] ) )
+                    {
+                        // print_rr($this->data['inputs']['form_url']);
+                        $url_parts = parse_url( $this->data['inputs']['form_url'] );
+                        parse_str( $url_parts['query'], $params );
+                        // print_rr($params);
+                        if ( isset( $params['action'] ) && isset( $params['id'] )  )
+                        {
+                            // print_rr($params);
+                            $field_entity_id = $this->data['entity_id'];
+                            $this->data['field_entity_id'] = $field_entity_id;
+                            $this->data['filter_entity_id'] = $params['id'];
+                            $this->data['filter_field_id'] = $this->get_field_id( $field_entity_id, 'actions' );
+                        }
+                    }
+                    break;
+                case 'items/form':
+                    // print_rr('items/form form_type in core module dialog_filter function');
+                    // print_rr($this->data);
+                    $this->data['field_entity_id'] = $this->data['entity_id'];
+                    break;
+                default:
+                    break;  
+            }
+            echo $this->get_select2_options();
+        } 
+    }
+
+    protected function get_select2_options()
+    {
+        // print_rr("in get_select2_options function - field entity id {$this->data['field_entity_id']} - entities id {$this->data['entities_id']}");
+        $entities_id = $this->data['entities_id'];
+        // print_rr($this->items); print_rr($this->data);
+        // if ( isset( $this->data['sql'] )  )
+        // {
+        //     $user_query = db_query( $this->data['sql'] );
+        //     while ( $results = db_fetch_array( $user_query ) )
+        //     {
+        //         $this->items[$results['id']] = $results;
+        //     }
+        // }
+        // print_rr($this->items);
+        $heading_field_id = \fields::get_heading_id( $entities_id );
+        uasort( $this->items, function ( $a, $b ) use ( $heading_field_id )
+        {
+            return strcmp( $a["field_$heading_field_id"], $b["field_$heading_field_id"] );
+        });
+        $options = array();
+        foreach ( $this->items as $items_id => $item )
+        {
+            // print_rr($item); 
+            // print_rr($this->data);
+            if ( ( isset( $this->data['filter_id'] ) && isset( $this->data['filter_field_id'] ) ) && !in_array( $this->data['filter_id'], explode( ',', $item["field_{$this->data['filter_field_id']}"] ) ) ) continue;
+            $heading_value = \items::get_heading_field_value( $heading_field_id, $item );
+            $item['heading'] = $heading_value;
+            // print_rr($this->data);
+            if ( isset( $this->data['prepare_add_item'] ) ) 
+            {
+                $form_entity_id = $this->data['form_entity_id'];
+                $items_id = "$entities_id-$items_id/$form_entity_id";
+            }
+            // print_rr($items_id);
+            $option = array( 'id' => $items_id, 'text' => $heading_value, 'html' => '<div>' . $heading_value . '</div>' );
+            if ( $this->get_default ) $option['field_id'] = $field_id;
+            $options[] = $option;
+        }
+        if ( $this->get_default )
+        {                
+            $response = array( 'field_id' => $status_field_id, 'default' => $options );
+        } 
+        else
+        {
+            $response = array( 'results' => $options );
+        }
+        return json_encode( $response );        
     }
 
     public function filter_statuses()

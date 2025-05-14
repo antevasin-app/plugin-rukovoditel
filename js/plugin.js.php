@@ -6,7 +6,7 @@ global $app_logged_users_id, $this_plugin;
 
 // print_rr($this_plugin); print_rr($core);
 $url = url_for( 'antevasin/core/', 'token=' . $app_session_token );
-$modules = json_encode( $this_plugin->get_modules() );
+$modules = json_encode( $this_plugin->get_modules( false ) );
 
 ?>
 
@@ -35,28 +35,51 @@ var plugin = plugin || {
             this.load_modal_form_js();
         }
     },
-    on_submodal_load:function( submodal ) {
-        // console.log('on submodal load')
+    on_submodal_load:function() {
+        // console.log('on submodal load',plugin.form.sub_items)
         let sub_items_form = $( '#sub_items_form' );
         // console.log('sub items form',sub_items_form)
-        plugin.wait_until_exists( '#sub_items_form' ).then( function( element ) {
-            // console.log('sub items form exists',element)
-            let form = $( element );
-            let hidden_input_elements = form.find('.form-body').find( 'input[type="hidden"]' );
-            let info = { "action_url":form.prop( 'action' ) };
-            $.each( hidden_input_elements, function( index, element ) {
-                // console.log(index,element)
-                let input = $( element );
-                let value = input.val();
-                info[input.prop( 'id' )] = input.val();
-            });   
-            // console.log(info)     
-            plugin.form['sub_items'] = info;
-            if ( info.path ) {
-                // console.log('sub items form path',info.path)
-                plugin.run_function( `entity_${info.path}` );
-            } 
-        })
+        // if ( typeof plugin.form.sub_items === 'undefined' ) {
+            // console.log('sub items form is loading for the first time')
+            plugin.wait_until_exists( '#sub_items_form' ).then( function( element ) {
+                // console.log('sub items form exists',element)
+                let form = $( element );
+                let hidden_input_elements = form.find('.form-body').find( 'input[type="hidden"]' );
+                let info = { "action_url":form.prop( 'action' ) };
+                $.each( hidden_input_elements, function( index, element ) {
+                    // console.log(index,element)
+                    let input = $( element );
+                    let value = input.val();
+                    info[input.prop( 'id' )] = input.val();
+                });   
+                core.items_form( info.path );
+                plugin.form['sub_items'] = info;
+                // console.log(`sub modal has loaded and exists - sub items entities id is ${plugin.form.sub_items.path} - entities id is ${plugin.form.entities_id}`,entity.ajax_fields) 
+                // let forms_field_id = 
+                if ( true ) { // field forms exists
+                    let forms_field_id = 581;
+                    let entity_name = entity.entities[plugin.form.entities_id]['name'];
+                    core.set_ajax_dropdown_value( {field_id:forms_field_id,id:plugin.form.entities_id,text:entity_name} );
+    
+                }
+                // if ( entity.ajax_fields.entity.name[entities_id] )    
+                // if ( info.path ) {
+                //     // console.log('sub items form path',info.path)
+                //     plugin.run_function( `entity_${info.path}` );
+                // } 
+            })
+        // } else {
+        //     console.log('sub items form been loaded before')
+        //     if ( true ) { // field forms exists
+        //         // console.log('run this')
+        //         let forms_field_id = 581;
+        //         let entity_name = entity.entities[plugin.form.entities_id]['name'];
+        //         let obj = {field_id:forms_field_id,id:plugin.form.entities_id,text:entity_name}
+        //         // console.log(obj)
+        //         core.set_ajax_dropdown_value( obj );
+
+        //     }
+        // }
     },
     get_entities_info:function( path ) {
         let paths = path.split( '/' );
@@ -111,7 +134,7 @@ var plugin = plugin || {
         this.run_function( js );
     },
     run_function:function( function_name ) {
-        // console.log('js function to run',function_name)
+        // console.log('js function to run',function_name,this.modules)
         $.each( this.modules, function( name, info ) {
             if ( window[name] ) {
                 if ( name != '' && typeof window[name][function_name] === 'function' ) {

@@ -1,13 +1,14 @@
 <?php
 
-namespace Antevasin;
+    namespace Antevasin;
 
-global $app_fields_cache, $app_session_token;
+    global $app_fields_cache, $app_session_token;
 
-$url = url_for( 'antevasin/core/', 'token=' . $app_session_token );
-$files_url = url_for( 'antevasin/core/files', 'token=' . $app_session_token );
-$entity_ajax_fields = core::get_entiity_fields_info( 'entity_ajax', true );
-
+    $url = url_for( 'antevasin/core/', 'token=' . $app_session_token );
+    $files_url = url_for( 'antevasin/core/files', 'token=' . $app_session_token );
+    $core = new core();
+    $entity_ajax_fields = $core->get_entiity_fields_info( 'entity_ajax', true );
+    $entities = $core->get_entities( true );
 ?>
 
 var core = core || {
@@ -182,13 +183,15 @@ var core = core || {
         let options = { year: 'numeric', day: '2-digit', month: '2-digit', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZone: '<?php echo CFG_APP_TIMEZONE ?>' };
         return date.toLocaleDateString( 'en-US', options );
     },
-    filter_status_field:function() {
+    filter_status_field:function( entities_id = plugin.form.entities_id ) {
         // console.log('in filter_status_field function',plugin.form); 
         if ( plugin.form.entities_id || plugin.form.sub_items ) {
-            let url = `${core.url}&action=filter_status_field&entities_id=${plugin.form.entities_id}`;
-            let entities_id = ( plugin.form.sub_items ) ? plugin.form.sub_items.path : plugin.form.entities_id;
+            // console.log(plugin.form)
+            // if ( 'sub_items' in plugin.form ) console.log('sub items exist')
+            // let entities_id = ( 'sub_items' in plugin.form ) ? plugin.form.sub_items.path : ;
+            let url = `${core.url}&action=filter_status_field&entities_id=${entities_id}`;
             let get_default_url = `${core.url}&action=filter_statuses&get_default=true&entities_id=${entities_id}`;
-            // console.log(get_default_url);
+            console.log(`entities id is ${entities_id}`,url,get_default_url);
             let get_default_callback = function( response ) {
                 // console.log('in get_default_callback function',response);
                 if ( response != '' ) {
@@ -196,14 +199,13 @@ var core = core || {
                     // console.log(response_obj);
                     if ( response_obj.field_id && response_obj.default ) {
                         let field_id = response_obj.field_id;
-                        // console.log('field id',field_id,$( `#btn_submodal_edit_item_${field_id}` ));
-                        $( `#btn_submodal_edit_item_${field_id}` ).hide()
                         let status_field = $( `#fields_${field_id}` );
+                        // console.log('field id',field_id,$( `#btn_submodal_edit_item_${field_id}` ),status_field,status_field.val());
                         status_field.on( 'select2:select', function ( e ) {
                             core.get_status_field_value_info( field_id );
                         });
                         if ( status_field.val() === null ) {
-                            console.log('status field has no value');
+                            // console.log('status field has no value');
                             $.each( response_obj.default, function( index, option_obj ) {
                                 core.set_ajax_dropdown_value( option_obj );                                
                             });
@@ -216,13 +218,54 @@ var core = core || {
                         }
                         let ajax_dropdown_url = `${core.url}&action=filter_statuses&entities_id=${plugin.form.entities_id}`;
                         core.set_ajax_dropdown( {url:ajax_dropdown_url,field_id:field_id,ajax_dropdown_callback} );
-                        // console.log(response_obj.data);
                         // $( '#fields_status_id' ).html( response_obj.data );
+                        // console.log('status field value',status_field.val());
+                        if ( status_field.val() == 1 ) $( `#btn_submodal_edit_item_${field_id}` ).hide()
                     }
                 }
             }
             core.ajax_get( get_default_url, get_default_callback );
         }
+    },
+    items_form:function( entities_id = plugin.form.entities_id ) {
+        // console.log('in service items_form function',plugin.form.entities_id,entities_id);
+        if ( entity.ajax_fields.entity.name[entities_id] ) {
+            // console.log(entity)
+            let status_ajax_fields = Object.fromEntries(
+                Object.entries( entity.ajax_fields.entity.name[entities_id] ).filter( ( [key] ) => key.includes( 'Status' ) )
+            );
+            // console.log('status ajax fiels',status_ajax_fields,'object keys length',Object.keys(status_ajax_fields).length);
+            if ( Object.keys(status_ajax_fields).length > 0 ) core.filter_status_field( entities_id );
+            this.on_click_handler( '.btn-submodal-open', this.submodal_load );
+            // $( '.btn-submodal-open' ).on( 'click', function() {
+            //     console.log('clicked on submodal');
+            //     plugin.on_submodal_load();
+            // });
+            // $.each( status_ajax_fields, function( title, fields ) {
+            //     console.log( title, fields );
+            //     $.each( fields, function( field_id, field ) {
+            //         console.log( field_id, field );
+                    
+            //     });
+            // });
+        }
+    },
+    submodal_load:function() {
+            console.log('clicked on submodal');
+            plugin.on_submodal_load();
+    },    
+    on_click_handler:function( selector, handler ) {
+            var $elements = $( selector );
+            $elements.each( function() {
+                var events = $._data( this, 'events' );
+                // Check if 'click' events exist and if the handler is already bound
+                if ( !events || !events.click || !events.click.some( function( e ) {
+                    return e.handler === handler;
+                })) {
+                    // Add the handler if it doesn't exist
+                    $( this ).on( 'click', handler );
+                }
+            });
     },
     sub_modal_visibility:function( field_id, system ) {
         if ( system ) {
@@ -430,7 +473,7 @@ var core = core || {
         })
     },
     set_ajax_dropdown_value:function( option_obj ) {
-        // console.log('option object',option_obj);
+        // console.log('in set_ajax_dropdown_value function - option object',option_obj);
         let options = new Option( option_obj.text, option_obj.id, false, false );
         let field = $( `#fields_${option_obj.field_id}` );
         field.append( options ).trigger( 'change' );
@@ -648,7 +691,7 @@ var core = core || {
 }
 
 var ui = ui || {
-    render_tabs:function( function_name, class_name = 'core' ) {
+    render_tabs: function( function_name, class_name = 'core' ) {
         let url = `${core.url}&action=render_tabs&function=${function_name}&class=${class_name}`;
         console.log('in ui render_tabs function',url);
         let callback = function( response ) {
@@ -659,7 +702,7 @@ var ui = ui || {
     }
 }
 
-var maps = maps || {
+var maps_ = maps_ || {
     address_components: {},
     address_fields: { 
         street_address: {field_id: 562},
@@ -691,6 +734,7 @@ var maps = maps || {
                 const response_obj = place.toJSON();
                 maps.get_address_fields( response_obj.addressComponents );
                 const address = response_obj.formattedAddress;
+                // console.log(to_field,address);
                 $( to_field ).val( address );
                 if ( fields_obj.lat ) {
                     $( `#fields_${fields_obj.lat}` ).val( response_obj.location.lat );                        
@@ -718,6 +762,7 @@ var maps = maps || {
                 document.addEventListener( 'click', function( event ) {
                     console.log('click event',event);
                     if ( event.target.closest( '.pac-item' ) ) {
+                        // console.log('i am here');
                         // Wait a bit for the place to be updated
                         setTimeout(async () => {
                             const place = placeAutocomplete.getPlace();
@@ -727,7 +772,11 @@ var maps = maps || {
                         }, 100 ); // Small delay to ensure the place is available
                     }
                 });
+                // document.addEventListener( 'gmp-placeselect', function( event ) {
+                //     console.log('gmp-placeselect',event);
+                // });
                 // placeAutocomplete.addEventListener( "gmp-placeselect", async ( { place } ) => {
+                //     console.log('gmp-placeselect',event);
                 //     await place.fetchFields({
                 //         fields: [ "displayName", "addressComponents", "formattedAddress", "location" ],
                 //     });
@@ -885,10 +934,154 @@ var maps = maps || {
     }
 }
 
-$( function() {
-    core.expand_pre();
-});
+let placesLoaded = false;
+
+// Load Google Maps Places API dynamically
+function loadPlacesAPI() {
+    if (placesLoaded) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        if (window.google && window.google.maps && window.google.maps.places) {
+            placesLoaded = true;
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyCJue_fSK533hqpKHe5LSSkgizsG9mzyXU&libraries=places&callback=initPlacesCallback';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+            // console.log('Google Maps Places API loaded successfully');
+            placesLoaded = true;
+            resolve();
+        };
+        script.onerror = () => {
+            console.error('Failed to load Google Maps Places API script');
+            reject(new Error('Failed to load Google Maps Places API'));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+// Callback function for Google Maps script
+window.initPlacesCallback = function( fields_obj ) {
+    placesLoaded = true;
+};
+
+var maps = maps || {
+    // Initialize Places API and dynamically create input
+    initPlaces: async function() {
+        $( '#fields_557' ).after( '<div id="address-details"></div>')
+        const error_div = document.getElementById('address-details');
+        $( '#fields_557' ).after( '<div id="input-container"></div>')
+        const inputContainer = document.getElementById('input-container');
+        
+        try {
+            await loadPlacesAPI();
+            if (!window.google || !window.google.maps || !window.google.maps.places) {
+                throw new Error('Google Maps Places library not available');
+            }
+
+            const { Place, AutocompleteSessionToken, AutocompleteSuggestion } = await google.maps.importLibrary("places");
+            // console.log('Places library imported successfully');
+
+            // Clear existing content in input container
+            inputContainer.innerHTML = '';
+
+            // Dynamically create input element
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.id = 'address-input';
+            input.className = 'form-control';
+            input.placeholder = 'Enter an address';
+
+            // Dynamically create suggestions div
+            const suggestionsDiv = document.createElement('div');
+            suggestionsDiv.id = 'suggestions';
+
+            // Append elements to input container
+            inputContainer.appendChild(input);
+            inputContainer.appendChild(suggestionsDiv);
+
+            // Clear details
+            error_div.innerHTML = '';
+
+            let sessionToken = new AutocompleteSessionToken();
+
+            // Fetch suggestions on input
+            input.addEventListener('input', async () => {
+                if (input.value.length < 3) {
+                    suggestionsDiv.style.display = 'none';
+                    return;
+                }
+
+                try {
+                    const request = {
+                        input: input.value,
+                        sessionToken: sessionToken
+                    };
+
+                    const { suggestions } = await AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+                    console.log('Fetched suggestions:', suggestions);
+
+                    // Display suggestions
+                    suggestionsDiv.innerHTML = '';
+                    suggestions.forEach(suggestion => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion';
+                        div.textContent = suggestion.placePrediction.text.text;
+                        div.dataset.placeId = suggestion.placePrediction.placeId;
+                        div.addEventListener('click', () => this.handlePlaceSelection(suggestion.placePrediction, sessionToken));
+                        suggestionsDiv.appendChild(div);
+                    });
+                    suggestionsDiv.style.display = suggestions.length ? 'block' : 'none';
+                } catch (error) {
+                    console.error('Error fetching suggestions:', error.message, error);
+                    suggestionsDiv.style.display = 'none';
+                    error_div.innerHTML = 'Error fetching suggestions. Check console for details.';
+                }
+            });
+
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+        } catch (error) {
+            console.error('Error initializing Places API:', error.message, error);
+            error_div.innerHTML = 'Error loading address lookup. Please check your API key or network connection.';
+        }
+    },
+    handlePlaceSelection: async function (placePrediction, sessionToken) {
+        const suggestionsDiv = document.getElementById('suggestions');
+        const error_div = document.getElementById('address-details');
+        suggestionsDiv.style.display = 'none';
+    
+        try {
+            const place = placePrediction.toPlace();
+            await place.fetchFields({
+                fields: ['displayName', 'formattedAddress', 'location']
+            });
+    
+            $( '#fields_557' ).val( place.formattedAddress );
+            $( '#fields_568' ).val( place.location.lat() );
+            $( '#fields_569' ).val( place.location.lng() );
+            console.log('Place details fetched:', place);
+    
+            // Reset session token after successful selection
+            sessionToken = new google.maps.places.AutocompleteSessionToken();
+        } catch (error) {
+            console.error('Error fetching place details:', error.message, error);
+            error_div.innerHTML = 'Error fetching address details. Check console for details.';
+        }
+    }    
+}
 
 var entity = entity || {
     ajax_fields: <?php echo $entity_ajax_fields ?>,
+    entities: <?php echo $entities ?>,
 }
+
+$( function() {
+    core.expand_pre();
+});
