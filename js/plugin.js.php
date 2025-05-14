@@ -39,47 +39,27 @@ var plugin = plugin || {
         // console.log('on submodal load',plugin.form.sub_items)
         let sub_items_form = $( '#sub_items_form' );
         // console.log('sub items form',sub_items_form)
-        // if ( typeof plugin.form.sub_items === 'undefined' ) {
-            // console.log('sub items form is loading for the first time')
-            plugin.wait_until_exists( '#sub_items_form' ).then( function( element ) {
-                // console.log('sub items form exists',element)
-                let form = $( element );
-                let hidden_input_elements = form.find('.form-body').find( 'input[type="hidden"]' );
-                let info = { "action_url":form.prop( 'action' ) };
-                $.each( hidden_input_elements, function( index, element ) {
-                    // console.log(index,element)
-                    let input = $( element );
-                    let value = input.val();
-                    info[input.prop( 'id' )] = input.val();
-                });   
-                core.items_form( info.path );
-                plugin.form['sub_items'] = info;
-                // console.log(`sub modal has loaded and exists - sub items entities id is ${plugin.form.sub_items.path} - entities id is ${plugin.form.entities_id}`,entity.ajax_fields) 
-                // let forms_field_id = 
-                if ( true ) { // field forms exists
-                    let forms_field_id = 581;
-                    let entity_name = entity.entities[plugin.form.entities_id]['name'];
-                    core.set_ajax_dropdown_value( {field_id:forms_field_id,id:plugin.form.entities_id,text:entity_name} );
-    
-                }
-                // if ( entity.ajax_fields.entity.name[entities_id] )    
-                // if ( info.path ) {
-                //     // console.log('sub items form path',info.path)
-                //     plugin.run_function( `entity_${info.path}` );
-                // } 
-            })
-        // } else {
-        //     console.log('sub items form been loaded before')
-        //     if ( true ) { // field forms exists
-        //         // console.log('run this')
-        //         let forms_field_id = 581;
-        //         let entity_name = entity.entities[plugin.form.entities_id]['name'];
-        //         let obj = {field_id:forms_field_id,id:plugin.form.entities_id,text:entity_name}
-        //         // console.log(obj)
-        //         core.set_ajax_dropdown_value( obj );
-
-        //     }
-        // }
+        plugin.wait_until_exists( '#sub_items_form' ).then( function( element ) {
+            // console.log('sub items form exists',element)
+            let form = $( element );
+            let hidden_input_elements = form.find('.form-body').find( 'input[type="hidden"]' );
+            let info = { "action_url":form.prop( 'action' ) };
+            $.each( hidden_input_elements, function( index, element ) {
+                // console.log(index,element)
+                let input = $( element );
+                let value = input.val();
+                info[input.prop( 'id' )] = input.val();
+            });   
+            core.items_form( info.path );
+            plugin.form['sub_items'] = info;
+            console.log(`sub modal has loaded and exists - sub items entities id is ${plugin.form.sub_items.path} - entities id is ${plugin.form.entities_id}`,entity.ajax_fields) 
+            if ( true ) { // field forms exists
+                let forms_field_id = 581;
+                let entity_name = entity.entities[plugin.form.entities_id]['name'];
+                core.set_ajax_dropdown_value( {field_id:forms_field_id,id:plugin.form.entities_id,text:entity_name} );
+                if ( plugin.form.sub_items.path > 0 ) plugin.run_function( `entity_${plugin.form.sub_items.path}` );
+            } 
+        });
     },
     get_entities_info:function( path ) {
         let paths = path.split( '/' );
@@ -128,7 +108,11 @@ var plugin = plugin || {
                 js = `entity_${entities_id}`;
                 this.run_function( 'items_form' );
                 break;
+            case 'form_single_field':
+                js = 'form_single_field';
+                break;
             default:
+                console.log('form type default',this.form['type'])
                 js = 'no function to run'
         }
         this.run_function( js );
@@ -181,7 +165,7 @@ var plugin = plugin || {
         this.get_form_hidden_inputs();
         core.get_url_params();
         core.get_form_url_params();
-        // console.log('in get_form functionn - this.form is ',this.form.path)
+        console.log('in get_form functionn - this.form is ',this.form)
     },
     get_form_hidden_inputs:function() {
         let obj = this;

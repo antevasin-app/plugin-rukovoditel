@@ -251,9 +251,14 @@ var core = core || {
         }
     },
     submodal_load:function() {
-            console.log('clicked on submodal');
+            // console.log('clicked on submodal');
             plugin.on_submodal_load();
-    },    
+    },  
+    form_single_field:function() {
+        console.log('in form_single_field function',plugin.form.url_params.action_url.field_id);
+        let field_id = plugin.form.url_params.action_url.field_id;
+        // if ( $( `#fields_${field_id}` ).val() == 1 ) $( `#btn_submodal_edit_item_${field_id}` ).hide()
+    },
     on_click_handler:function( selector, handler ) {
             var $elements = $( selector );
             $elements.each( function() {
@@ -298,10 +303,13 @@ var core = core || {
     },
     get_form_url_params() {
         let properties = [ 'action_url', 'form_url', 'modal_url', 'page_url' ];
+        // Initialize plugin.form.url_params as an object if it doesn't exist
+        if ( !plugin.form.url_params ) plugin.form.url_params = {};
         $.each( properties, function( index, property ) {
             if ( plugin.form[property] ) {
                 let params = core.get_url_params( plugin.form[property] );
-                // console.log(property,params);
+                // console.log('property and params',property,params);
+                plugin.form.url_params[property] = params;
                 if ( params.module && params.action && params.id ) {
                     if ( params.module == 'items/processes' ) {
                         if ( typeof plugin.form.module === 'undefined' ) {
@@ -337,6 +345,7 @@ var core = core || {
                 plugin.form['path'] = params.path;
             } 
         }
+        // console.log('params',params);
         return params;
     },
     get_status_field_value_info:function( field_id ) {
@@ -970,6 +979,7 @@ window.initPlacesCallback = function( fields_obj ) {
 var maps = maps || {
     // Initialize Places API and dynamically create input
     initPlaces: async function() {
+        // console.log('in initPlaces function');
         $( '#fields_557' ).after( '<div id="address-details"></div>')
         const error_div = document.getElementById('address-details');
         $( '#fields_557' ).after( '<div id="input-container"></div>')
@@ -992,7 +1002,7 @@ var maps = maps || {
             input.type = 'text';
             input.id = 'address-input';
             input.className = 'form-control';
-            input.placeholder = 'Enter an address';
+            input.placeholder = 'Enter an address to search for...';
 
             // Dynamically create suggestions div
             const suggestionsDiv = document.createElement('div');
@@ -1021,7 +1031,7 @@ var maps = maps || {
                     };
 
                     const { suggestions } = await AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
-                    console.log('Fetched suggestions:', suggestions);
+                    // console.log('Fetched suggestions:', suggestions);
 
                     // Display suggestions
                     suggestionsDiv.innerHTML = '';
