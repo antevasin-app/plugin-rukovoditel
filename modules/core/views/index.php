@@ -21,6 +21,11 @@ $core_module_tabs = array(
                         'field_class' => 'plugin-info',
                         'label' => 'Auto Actions',
                         'field' => '<a onclick="plugin.run_module_action( `update_auto_actions` )">Update</a>'
+                    ),
+                    array(
+                        'field_class' => 'plugin-info',
+                        'label' => 'Timezones',
+                        'field' => '<a onclick="plugin.run_module_action( `update_timezones` )">Update</a>'
                     )
                 )
             ),
