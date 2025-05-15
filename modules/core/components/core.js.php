@@ -334,7 +334,14 @@ var core = core || {
         });
     },
     get_url_params:function( url = null ) {
-        let query_string = ( url === null ) ? window.location.search : new URL( url ).search;
+        let query_string = window.location.search; // Default fallback
+        if ( url != null && typeof url === 'string' && url !== '' ) {
+            try {
+                query_string = new URL(url).search;
+            } catch (e) {
+                console.error('Invalid URL provided:', url, e);
+            }
+        }
         let search_params = new URLSearchParams( query_string );
         let params = {};
         for( const param of search_params ) {

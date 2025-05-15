@@ -612,6 +612,46 @@ class core implements module
         }
     }
 
+    public function update_timezones()
+    {
+        $timezone_entity_id = 37;
+        $timezone_field = "field_657";
+        $existing_entity_timezones = db_fetch_all( "app_entity_$timezone_entity_id" );
+        print_rr($existing_entity_timezones);
+        $entity_timezones = array();
+        foreach ( $existing_entity_timezones as $id => $timezone )
+        {
+            $entity_timezones[$timezone[$timezone_field]] = $timezone;
+        }
+        print_rr($entity_timezones);
+        $timezone_list = array();
+        $timezone_identifiers = \DateTimeZone::listIdentifiers();
+        $now = time();
+        for ( $i = 1; $i < sizeof( $timezone_identifiers ); $i++ )
+        {
+            $timezone = $timezone_identifiers[$i];
+            $timezone_list[$i] = $timezone;
+            if ( isset( $entity_timezones[$timezone] ) )
+            {
+                print_rr("timezone already exists - $timezone");
+            }
+            else
+            {
+                print_rr("timezone $timezone does not exist");
+                $sql = "
+                    INSERT INTO `app_entity_$timezone_entity_id`
+                    ( `parent_id`, `parent_item_id`, `linked_id`, `date_added`, `date_updated`, `created_by`, `sort_order`, $timezone_field, `field_660` ) 
+                    VALUES 
+                    ( 0, 0, 0, $now, 0, 1, 0, '$timezone', 1 )
+                ";
+                print_rr($sql); 
+                db_query( $sql );
+            }
+            // exit();
+        }
+        print_rr($timezone_list);
+    }
+
     // db functions
 
     public function db_insert( $entities_id, $sql_data )
