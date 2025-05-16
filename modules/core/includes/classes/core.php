@@ -304,12 +304,15 @@ class core implements module
         curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, TRUE ); 
         $response = curl_exec( $ch );
         if ( $e = curl_error( $ch ) ) {
-            $curl_response = '{"Error":{"message":"' . $e . '","reasonCode":"http_request_error"}}';
-            die($curl_response);
+            $curl_response = '{"CURL Error":{"message":"' . $e . '","reasonCode":"http_request_error"}}';
+            die( $curl_response );
         } else {
             $curl_response = $response;  
         }
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close( $ch );
+        // Check if request was successful
+        if ( $httpCode !== 200 ) die( 'HTTP Error: ' . $httpCode );
         return $curl_response;          
     }
     
@@ -610,6 +613,110 @@ class core implements module
                 }
             }
         }
+    }
+
+    public function update_currencies( $currencies )
+    {
+        // print_rr($currencies);
+        $currency_entity_id = 30;
+        $name_field = 'field_517';
+        $status_field = 'field_520';
+        $code_field = 'field_521';
+        $symobol_field = 'field_522';
+        $currency_ids = array();
+        foreach ( $currencies as $code => $currency_info )
+        {
+            $sql = "SELECT * FROM app_entity_$currency_entity_id WHERE field_521='$code'";
+            if ( $result = db_fetch_array( db_query( $sql ) ) )
+            {
+                $currency_id = $result['id'];
+                // print_rr("currency exists so check and return");
+                // print_rr($result);
+                if ( $result[$symobol_field] != $currency_info['symbol'] ) "UPDATE app_entity_$currency_entity_id SET $symobol_field='{$currency_info['symbol']}'"; // print_rr("currency name {$result[$name_field]} - update symbol value {$result[$symobol_field]} - {$currency_info['symbol']}");
+                if ( $result[$name_field] != $currency_info['name'] ) "UPDATE app_entity_$currency_entity_id SET $name_field='{$currency_info['name']}'"; // print_rr("update name value {$result[$name_field]} - {$currency_info['name']}");
+            }
+            else
+            {
+                // print_rr("currency does not exist so create it");
+                $now = time();
+                $name = db_input( $this->replace_unicode_ascii( $currency_info['name'] ) );
+                $symbol = db_input( $this->replace_unicode_ascii( $currency_info['symbol'] ) );
+                $sql_data = array(
+                    $name_field => "$name",  
+                    $status_field => 1,  
+                    $code_field => "$code",  
+                    $symobol_field => "$symbol",  
+                );
+                // print_rr($sql_data);
+                $currency_id = $this->db_insert( $currency_entity_id, $sql_data );
+            }
+            $currency_ids[] = $currency_id;
+        }
+        // exit();
+        return implode( ',', $currency_ids );
+    }
+
+    public function update_countries() 
+    {
+        // API endpoint to get all countries
+        $url = 'https://restcountries.com/v3.1/all';
+        $response = core::curl_get( $url );
+        // Decode JSON response
+        $countries = json_decode( $response, true );
+        
+        // Check if JSON decoding was successful
+        if ( json_last_error() !== JSON_ERROR_NONE ) 
+        {
+            echo 'JSON Decode Error: ' . json_last_error_msg();
+            return;
+        }
+        // print_rr($countries);
+        // Iterate through countries and extract name and currencies
+        foreach ( $countries as $country ) 
+        {
+            $currencies = $country['currencies'] ?? [];
+            if ( !empty( $currencies ) ) 
+            {
+                foreach ( $currencies as $code => $details ) 
+                {
+                    $currencyName = $details['name'] ?? 'Unknown';
+                    $currencySymbol = $details['symbol'] ?? '';
+                    // print_rr("Currency: $currencyName ( $code ), Symbol: $currencySymbol");
+                }
+            } 
+            else 
+            {
+                // print_rr($currencies);
+                // print_rr("Country: {$details['name']}, Currency: None");
+            }
+            $sql_data = array();
+            $sql_data['field_497'] = $country['name']['common'] ?? '';
+            $sql_data['field_498'] = $country['name']['official'] ?? '';
+            // $sql_data['field_499'] = $country['name']['common'] ?? 'Unknown';
+            $sql_data['field_500'] = 1;
+            $sql_data['field_501'] = $this->update_currencies( $currencies );
+            $sql_data['field_502'] = $country['ccn3'] ?? '';
+            $sql_data['field_503'] = $country['cca2'] ?? '';
+            $sql_data['field_504'] = $country['cca3'] ?? '';
+            // print_rr($sql_data);
+            $this->db_insert( 29, $sql_data );
+        }
+    }
+
+    public function replace_unicode_ascii( $string ) 
+    {
+        // print_rr($string);
+        if ( !mb_check_encoding( $string, 'UTF-8' ) ) 
+        {
+            $string = mb_convert_encoding( $string, 'UTF-8', 'auto' );
+        }
+        $unicodeToAscii = ["\u{02BB}" => "'", "\u{00E9}" => 'e', "\u{00F1}" => 'n'];
+        // print_rr($string);
+        $string = strtr($string, $unicodeToAscii);
+        // print_rr($string);
+        // $string = preg_replace('/[^\x00-\x7F]/u', '', $string);
+        // print_rr($string);
+        return $string;
     }
 
     public function update_timezones()

@@ -24,6 +24,11 @@ $core_module_tabs = array(
                     ),
                     array(
                         'field_class' => 'plugin-info',
+                        'label' => 'Countries & Currencies',
+                        'field' => '<a onclick="plugin.run_module_action( `update_countries` )">Update</a>'
+                    ),
+                    array(
+                        'field_class' => 'plugin-info',
                         'label' => 'Timezones',
                         'field' => '<a onclick="plugin.run_module_action( `update_timezones` )">Update</a>'
                     )
