@@ -165,7 +165,7 @@ var plugin = plugin || {
         this.get_form_hidden_inputs();
         core.get_url_params();
         core.get_form_url_params();
-        console.log('in get_form functionn - this.form is ',this.form)
+        // console.log('in get_form functionn - this.form is ',this.form)
     },
     get_form_hidden_inputs:function() {
         let obj = this;

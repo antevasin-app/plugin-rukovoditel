@@ -104,20 +104,20 @@ var core = core || {
             $( '#return_data' ).val( jqXHR.responseText );
         }
     },
-    ajax_post:function( url, data, done = this.console_response ) {
+    ajax_post:function( url, data, callback = this.console_response ) {
         $.ajax({
             method: "POST",
             url: url,
             data: data,
             headers: core.ajax_headers
         })
-        .done( done )
+        .done( callback )
         .fail( function( jqXHR, textStatus, errorThrown ) {
             // do something based on failure
             core.log_ajax_error( jqXHR, textStatus, errorThrown );
         })
     },
-    ajax_get:function( url, done = this.console_response ) {
+    ajax_get:function( url, callback = this.console_response ) {
         let settings = {
             method: "GET",
             url: url
@@ -126,7 +126,9 @@ var core = core || {
             settings.headers = core.ajax_headers;
         }
         $.ajax( settings )
-        .done( done )
+        .done( function( response ) {
+            callback( response );
+        })
         .fail( function( jqXHR, textStatus, errorThrown ) {
             // do something based on failure
             core.log_ajax_error( jqXHR, textStatus, errorThrown );
@@ -191,7 +193,7 @@ var core = core || {
             // let entities_id = ( 'sub_items' in plugin.form ) ? plugin.form.sub_items.path : ;
             let url = `${core.url}&action=filter_status_field&entities_id=${entities_id}`;
             let get_default_url = `${core.url}&action=filter_statuses&get_default=true&entities_id=${entities_id}`;
-            console.log(`entities id is ${entities_id}`,url,get_default_url);
+            // console.log(`entities id is ${entities_id}`,url,get_default_url);
             let get_default_callback = function( response ) {
                 // console.log('in get_default_callback function',response);
                 if ( response != '' ) {
@@ -391,6 +393,36 @@ var core = core || {
             }
         });
         return user_id;
+    },
+    render_system_buttons:function( buttons_obj ) {
+        console.log('in get_system_btn function',buttons_obj);
+        var buttons = '';
+        $.each( buttons_obj, function( id, button ) {
+            // console.log('button',button);
+            try {
+                let icon = ( button.icon ) ? `<i class="fa ${button.icon}"></i> ` : '';
+                let params = ( button.params ) ? button.params : {};
+                let url = core.get_system_url( button.module, params );
+                let js_onclick = ( button.modal ) ? `open_dialog('${url}'); return false;` : `window.location.assign('${url}')`;
+                buttons += `<button onclick="${js_onclick}" class="btn btn-primary" type="button">${icon} ${button.title}</button>`;
+
+            } catch (error) {
+                console.error('Error creating button:', error.message, error);
+            }
+        });
+        plugin.wait_until_exists( '#system_buttons' ).then( function( element ) {
+            $( '#system_buttons' ).html( buttons );
+        });        
+    },
+    get_system_url:function( module, params = {} ) {
+        // console.log('in get_system_url function',module);
+        var url_params = [];
+        $.each( params, function( key, value ) {
+                url_params.push( `${key}=${value}` );
+        });
+        console.log('url params',url_params);
+        let url = `<?php echo url_for( '${module}' ) ?>&${url_params.join('&')}`;
+        return url;
     },
     get_uat_btn_url:function() {
         console.log('uat button clicked');

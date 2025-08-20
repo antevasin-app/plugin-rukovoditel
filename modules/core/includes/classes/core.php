@@ -4,13 +4,14 @@ namespace Antevasin;
 
 class core implements module
 {
+    private static $instance = null;
+
     private $plugin_name;
     private $plugin_path;
     private $plugin_version;
     private $core_path;
     private $app_user;
     private $user_group_ids;
-    private $user_settings;
     private $entities;
     private $name;
     private $title;
@@ -21,19 +22,23 @@ class core implements module
     private $config;
     private $index_tabs;
     private $get_default = false;
-
+    
     protected $debug = false;
     protected $items = array(); 
     protected $items_info = array();
-    protected $data;
     protected $user_id;
     protected $system_log_data = array();
     protected $entity_user_fields = array();
+    
+    public $data;
+    public $user_settings;
 
     public function __construct( $name = null )
     {
         global $app_user;
 
+        // print_rr("core module constructor called");
+        // print_rr(debug_backtrace());
         $this->data = array_merge( $_GET, $_POST );   
         $this->plugin_name = PLUGIN_NAME;
         $this->plugin_path = PLUGIN_PATH;
@@ -55,6 +60,53 @@ class core implements module
             $this->get_user_settings();
             $this->set_error_reporting();
         }
+    }
+
+    public static function generate_password( $legnth = 11 )
+    {
+        $hasher = new \PasswordHash( $legnth, false );    
+        $password = \users::get_random_password();
+        return array( 'password' => $password, 'hashed' => $hasher->HashPassword( $password ) );
+    }
+
+    public static function set_public_module_token( $public_modules )
+    {
+        global $app_session_token;
+
+        // print_rr('in set_public_module_token function');
+        if ( isset( $_GET['module'] ) && in_array( $_GET['module'], $public_modules ) )
+        {
+            // print_rr('we are making a request to a public module - check if the user is logged in');
+            // print_rr($_GET);
+            // print_rr($_POST);
+            // print_rr($_COOKIE);
+            // print_rr(app_session_is_registered('app_logged_users_id'));
+            // print_rr($app_session_token);
+            if ( isset( $_COOKIE['app_remember_user'] ) && isset( $_COOKIE['app_remember_pass'] ) && app_session_is_registered('app_logged_users_id') )
+            {
+                // print_rr('user is logged in set token to avoid CSRF flag');
+                $_GET['token'] = $app_session_token;
+            }
+        }
+        else
+        {
+            // print_rr('we are not making a request to a public module - do nothing');
+        }
+        // foreach ( $public_modules as $public_module )
+        // {
+        //     print_rr($public_module);
+        // }   
+        // print_rr($_GET);
+        // print_rr($_POST);
+        // print_rr($_COOKIE);
+    }
+
+    public static function get_instance() {
+        if ( self::$instance === null ) 
+        {
+            self::$instance = new self();
+        }
+        return self::$instance;
     }
 
     // setter functions 
@@ -144,6 +196,96 @@ class core implements module
     {
         $group_ids = array( 0, 1 );
         return $group_ids;
+    }
+
+    public function download_attachment()
+    {
+        // die(print_rr('in download_attachment function'));
+        if ( isset( $this->data['file'] ) )
+        {
+            $file = \attachments::parse_filename( base64_decode( $this->data['file'] ) );
+            //check if using file storage for field
+            if ( class_exists( 'file_storage' ) and isset( $this->data['field'] ) )
+            {      	
+                \file_storage::download_file(_get::int('field'), base64_decode($_GET['file']));      	
+            }
+    
+            if ( is_file( $file['file_path'] ) )
+            {
+              if ( $file['is_image'] and isset( $this->data['preview'] ) )
+              {                          
+                  if($this->data['preview']=='small' and CFG_CREATE_ATTACHMENTS_PREVIEW==1)
+                  {                
+                      $file['file_path'] = \attachments::prepare_image_preview($file);                               
+                  }
+                                        
+                  header("Content-type: " . $file['mime_type']);
+                  header('Content-Disposition: filename="' . $file['name'] . '"');
+      
+                  flush();
+      
+                  readfile($file['file_path']);
+              }
+              elseif($file['is_audio'] and isset($this->data['preview']))
+              {
+                  $type = mime_content_type($path);
+                  header("Content-type: " . $type);
+                  header('Content-Disposition: filename="' . $file['name'] . '"');
+                  
+                  flush();
+                  
+                  readfile($file['file_path']);
+              }
+              elseif($file['is_pdf'] and isset($this->data['preview']))
+              {                                                        
+                header("Content-type: application/pdf");
+                header('Content-Disposition: filename="' . $file['name'] . '"');
+                
+                flush();
+                
+                readfile($file['file_path']);
+              }
+              else
+              {                     
+                header('Content-Description: File Transfer');
+                header('Content-Type: application/octet-stream');
+                header('Content-Disposition: attachment; filename='.$file['name']);
+                header('Content-Transfer-Encoding: binary');
+                header('Expires: 0');
+                header('Cache-Control: must-revalidate');
+                header('Pragma: public');
+                header('Content-Length: ' . filesize($file['file_path']));
+                
+                flush();
+                      
+                readfile( $file['file_path'] );          
+              }
+    
+            }
+            else
+            {
+              echo TEXT_FILE_NOT_FOUD;
+            }
+        }
+    }
+
+    public function destroy_session() : bool
+    {
+        if ( isset( $this->data['token'] ) ) 
+        {
+            $sql = "SELECT * FROM app_sessions WHERE value LIKE '%" . db_input( $this->data['token'] ) . "%'";
+            if ( $result = db_fetch_array( db_query( $sql ) ) )
+            {
+                $sesskey = $result['sesskey'];
+                print_rr("Destroying session with sesskey: $sesskey");
+                // db_query("delete from app_sessions where sesskey = '" . db_input($sesskey) . "'");
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
     }
 
     public function module_index_tabs( form $form )
@@ -245,10 +387,11 @@ class core implements module
         return $this->is_module_user;
     }
 
-    private function get_user_settings()
+    public function get_user_settings()
     {
         global $app_logged_users_id;
-        
+ 
+        if ( empty( $app_logged_users_id ) ) return;
         $sql = "SELECT * FROM app_users_configuration WHERE users_id=$app_logged_users_id AND configuration_name LIKE 'plugin%'";
         $user_query = db_query( $sql );
         $user_settings = array();
@@ -275,6 +418,25 @@ class core implements module
             }
         }
     } 
+
+    public function set_user_setting( $key, $value ) 
+    {
+      global $app_user;
+      
+      $setting = json_encode( array_values( $value ) );
+      if ( strlen( $key ) > 0 )
+      {
+        $cfg_query = db_query( "select * from app_users_configuration where users_id='" . db_input( $app_user['id'] ) . "' and configuration_name='plugin-" . db_input( $key ) . "'" );   
+        if ( $cfg = db_fetch_array( $cfg_query ) )
+        {
+          db_query( "update app_users_configuration set configuration_value='" . db_input( $setting ) . "' where users_id='" . db_input( $app_user['id'] ) . "' and configuration_name='plugin-" . db_input( $key ). "'" );
+        }
+        else
+        {
+          db_perform( 'app_users_configuration', array( 'configuration_name' => 'plugin-' . $key, 'configuration_value' => trim( $setting ),'users_id'=>$app_user['id'] ) );
+        }
+      } 
+    }
 
     private function set_error_reporting()
     {
@@ -349,17 +511,36 @@ class core implements module
         }
     }
 
-    protected function get_ajax_field_entities_id( $field_id )
+    public function get_ajax_field_entities_id( $field_id )
     {
-        $sql = "SELECT * FROM app_fields WHERE id=$field_id";
-        if ( $result = db_fetch_array( db_query( $sql ) ) )
+        if ( is_array( $field_id ) )
         {
-            $config = json_decode( $result['configuration'], true );
-            return $config['entity_id'];
+            $field_id = implode( ',', $field_id );
+            $sql = "SELECT * FROM app_fields WHERE id IN ( $field_id )";
+            $user_query = db_query( $sql );
+            $entities_ids = array();
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                $config = json_decode( $results['configuration'], true );
+                if ( isset( $config['entity_id'] ) )
+                {
+                    $entities_ids[$results['id']] = $config['entity_id'];
+                }
+            }
+            return $entities_ids;
+        }
+        else
+        {
+            $sql = "SELECT * FROM app_fields WHERE id=$field_id";
+            if ( $result = db_fetch_array( db_query( $sql ) ) )
+            {
+                $config = json_decode( $result['configuration'], true );
+                return $config['entity_id'];
+            }
         }
     }
     
-    protected function get_field_entity_id( $field_id )
+    public function get_field_entity_id( $field_id )
     {
         $sql = "SELECT * FROM app_fields WHERE id=$field_id";
         if ( $result = db_fetch_array( db_query( $sql ) ) )
@@ -368,8 +549,9 @@ class core implements module
         }
     }
 
-    protected function get_field_id( $entity_id, $field_name )
+    public function get_field_id( $entity_id, $field_name )
     {
+        // print_rr("get field id for $field_name in entity $entity_id");
         $sql = "SELECT * FROM app_fields WHERE name LIKE '$field_name' AND entities_id=$entity_id";
         if ( $result = db_fetch_array( db_query( $sql ) ) )
         {
@@ -413,6 +595,41 @@ class core implements module
             while ( $results = db_fetch_array( $user_query ) )
             {
                 $fields[$results['id']] = $results;
+            }
+            return $fields;
+        }
+    }
+
+    public function get_entity_fields_( $entities = false, $entity_id = false )
+    {
+        if ( isset( $this->data['entities_id'] ) )
+        {
+            $entities_id = ( $entity_id ) ? $entity_id : $this->data['entities_id'];
+            $sql = "SELECT * FROM app_fields WHERE entities_id=$entities_id AND type LIKE 'fieldtype_entity_%'";
+            $user_query = db_query( $sql );
+            $fields = array();
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                if  ( $entities )
+                {
+                    $field_cfg = new \fields_types_cfg( $results['configuration'] );
+                    // print_rr($results['id']); print_rr($field_cfg);
+                    if ( isset( $fields[$field_cfg->cfg['entity_id']] ) )
+                    {     
+                        // print_rr($fields[$field_cfg->cfg['entity_id']]);
+                        $fields[$field_cfg->cfg['entity_id']] = array( $fields[$field_cfg->cfg['entity_id']] );
+                        // $fields = array( $fields[$field_cfg->cfg['entity_id']], $results['id'] );                    
+                        $fields[$field_cfg->cfg['entity_id']][] = $results['id'];
+                    }
+                    else
+                    {
+                        $fields[$field_cfg->cfg['entity_id']] = $results['id'];    
+                    }
+                }
+                else
+                {
+                    $fields[$results['id']] = $results;
+                }
             }
             return $fields;
         }
@@ -944,6 +1161,97 @@ class core implements module
         return $sql;
     }
 
+    public function filter_for_public()
+    {
+        if ( isset( $this->data['entities_id'] ) )
+        {
+            global $app_logged_users_id;
+
+            // print_rr($this);
+            $public_forms = array( 33, 52 );
+            $entities_id = $this->data['entities_id'];
+            $heading_field_id = \fields::get_heading_id( $entities_id );
+            $form_filter_sql = $created_by_sql = '';
+            $private_field_id = $this->get_field_id( $entities_id, 'private' );
+            if ( isset( $this->data['field_id'] ) )
+            {
+                $form_entities_id = $this->get_field_entity_id( $this->data['field_id'] );
+                $forms_field_id = $this->get_field_id( $entities_id, 'forms' );
+                if ( !empty( $forms_field_id ) ) $form_filter_sql = "AND FIND_IN_SET( $form_entities_id, field_$forms_field_id)";        
+            }
+            else
+            {
+                $created_by_sql = "AND created_by={$app_logged_users_id}";
+            }
+            /*
+            $sql = "
+                SELECT field_$heading_field_id, id, created_by
+                FROM (
+                    SELECT field_$heading_field_id, id, created_by,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY field_$heading_field_id 
+                            ORDER BY CASE WHEN created_by = $app_logged_users_id THEN 0 ELSE 1 END, id DESC
+                        ) AS rn
+                    FROM app_entity_$entities_id
+                    WHERE field_584 != 'true' $form_filter_sql
+                ) t
+                WHERE rn = 1
+                ORDER BY 
+                    CASE WHEN created_by = $app_logged_users_id THEN 0 ELSE 1 END,
+                    field_$heading_field_id
+            "; 
+            */  
+            $sql = "SELECT * FROM app_entity_$entities_id WHERE 1 $created_by_sql $form_filter_sql";
+            // print_rr($sql);  
+            $user_query = db_query( $sql );
+            $items = array();
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                // print_rr($results); print_rr($items);
+                if ( isset( $this->data['field_id'] ) ) // is a field on a form so remove duplicates
+                {
+                    if ( $results['created_by'] != $app_logged_users_id && $results["field_$private_field_id"] == 'true' ) continue; // skip private items
+                    $matches = array_keys( array_filter( $items, function( $item ) use ( $heading_field_id, $results ) {
+                        return $item["field_$heading_field_id"] === $results["field_$heading_field_id"];
+                    }));                    
+                    if ( empty( $matches ) ) 
+                    {
+                        $items[$results['id']] = $results;
+                    }
+                }
+                else 
+                {
+                    // field_$private_field_id != 'true'
+                    $items[$results['id']] = $results;
+                }
+            }
+            // print_rr($items);
+            return $items;
+        }
+    }
+
+    public function filter_by_system()
+    {
+        if ( isset( $this->data['entities_id'] ) )
+        {
+            // print_rr('in filter_by_system function');
+            $entities_id = $this->data['entities_id'];
+            $form_filter_sql = '';
+            $form_entities_id = $this->get_field_entity_id( $this->data['field_id'] );
+            $entities_field_id = $this->get_field_id( $entities_id, 'forms' );
+            if ( !empty( $entities_field_id ) ) $form_filter_sql = "AND FIND_IN_SET( $form_entities_id, field_$entities_field_id)";
+            $sql = "SELECT * FROM app_entity_$entities_id WHERE created_by=1 $form_filter_sql";
+            $user_query = db_query( $sql );
+            $items = array();   
+            while ( $results = db_fetch_array( $user_query ) )
+            {
+                // print_rr($results);
+                $items[$results['id']] = $results;
+            }
+            return $items;
+        } 
+    }
+
     public function filter_by_user()
     {
         if ( isset( $this->data['entities_id'] ) )
@@ -975,10 +1283,10 @@ class core implements module
     {
         global $app_module_path, $app_module, $app_action;
 
-        // print_rr('in filter_by_companies function');
         if ( isset( $this->data['entities_id'] ) )
         {
             $entities_id = $this->data['entities_id'];
+            // print_rr("entities id is {$entities_id}");
             $status_entity_id = $this->get_entity_id( 'statuses' );         
             $user_companies = $this->get_user_companies();
             $companies_users = $this->get_companies_users(); 
@@ -1000,6 +1308,7 @@ class core implements module
             }
             if ( isset( $this->system_entity_fields[$entities_id] ) ) // not sure what this was being used for...
             {
+                // print_rr("system entity fields for entities id $entities_id");
                 // for records visibility user groups are not permitted to change system entity items
                 // $system_entity_fields = " OR e.field_{$this->system_entity_fields[$entities_id]} = 'true'";
             }
@@ -1015,7 +1324,14 @@ class core implements module
             if ( empty( $user_companies ) )
             {
                 // print_rr('no user companies'); print_rr($user_companies); print_rr($companies_users);
-                $items = array( 0 );
+                // get items user created
+                $sql = "SELECT * FROM app_entity_{$entities_id} WHERE created_by={$this->user_id}";
+                $user_query = db_query( $sql );
+                while ( $results = db_fetch_array( $user_query ) )
+                {
+                    $items[$results['id']] = $results;
+                }
+                if ( empty( $items ) ) $items = array();
             }
             else
             {
@@ -1070,7 +1386,8 @@ class core implements module
     {
         global $app_fields_cache;
         
-        // print_rr("in filter_by_company_fields function - field entity id {$this->data['field_entity_id']} - entities_id {$this->data['entities_id']}"); 
+        // print_rr("in filter_by_company_fields function"); 
+        // print_rr($this);
         if ( isset( $this->data['entities_id'] ) )
         {
             $entities_id = $this->data['entities_id']; 
@@ -1079,14 +1396,15 @@ class core implements module
             $items = $this->filter_by_companies();
             if ( !isset( $items[0] ) )
             {
-                $entity_fields = $this->get_entity_fields( $entities_id );
+                $entity_fields = $this->get_entity_fields();
+                // print_rr($entity_fields);
                 // capture the original entity id
                 $entity_id = $this->data['entities_id'];
                 // print_rr("in filter_by_company_fields function before - entities_id {$this->data['entities_id']}"); 
                 foreach ( $entity_fields as $field_id => $field )
                 {
                     // print_rr("in filter_by_company_fields function during - entities_id {$this->data['entities_id']}"); 
-                    $field_cfg = new \fields_types_cfg($app_fields_cache[$entities_id][$field_id]['configuration']);
+                    $field_cfg = new \fields_types_cfg( $app_fields_cache[$entities_id][$field_id]['configuration'] );
                     $companies_field_id = $this->get_field_id( $field_cfg->get( 'entity_id' ), 'companies' );
                     if ( !empty( $companies_field_id ) )
                     {
@@ -1119,6 +1437,8 @@ class core implements module
 
     public function filter_by_projects()
     {
+        global $app_logged_users_id;
+
         if ( isset( $this->data['entities_id'] ) )
         {
             $entities_id = $this->data['entities_id'];
@@ -1126,10 +1446,12 @@ class core implements module
             // print_rr($companies_users);
             if ( $entities_id == 21 )
             {
+                // print_rr('entities id is 21');
                 $all_projects_query = db_fetch_all( "app_entity_$entities_id" );
                 $projects = array();
                 while ( $results = db_fetch_array( $all_projects_query ) )
                 {
+                    // print_rr($results);
                     $team_ids = ( empty( $results['field_161'] ) ) ? array() : explode( ',', $results['field_161'] );
                     // print_rr($team_ids);
                     if ( empty( $team_ids ) ) $projects[$results['id']] = $results;
@@ -1140,9 +1462,21 @@ class core implements module
             }
             else
             {
-                // print_rr('entities id is not 21');
-                $this->entity_user_fields = array( 1449, 1450, 1451 );
-                $items = $this->filter_by_companies();
+                if ( $entities_id == 23 )
+                {
+                    $sql = "SELECT * FROM app_entity_$entities_id WHERE FIND_IN_SET( $app_logged_users_id, field_1449 )";
+                    $user_query = db_query( $sql );
+                    $items = array();
+                    while ( $results = db_fetch_array( $user_query ) )
+                    {
+                        $items[$results['id']] = $results;
+                    }
+                }
+                else
+                {
+                    $this->entity_user_fields = array( 1449, 1450, 1451 );
+                    $items = $this->filter_by_companies();
+                }
             }
             // $items = array( 2 => array( 'id' => 2, 'name' => 'Project 2' ) );
             $items = ( $entities_id == 21 ) ? $projects : $items;
@@ -1606,7 +1940,6 @@ class core implements module
                 $statuses[$results['id']] = $results;
             }    
             ksort( $statuses );          
-            // print_rr($statuses);
             foreach ( $statuses as $status_id => $status )
             {
                 if ( !in_array( $filter_entity_id, explode( ',', $status["field_$statuses_forms_field_id"] ) ) ) continue;
@@ -2423,13 +2756,15 @@ class core implements module
         }    
     }
 
-    public static function set_app_user( $user_id = '' )
+    public static function set_app_user( $user_id = false )
     {
         global $app_user, $app_logged_users_id;
         
-        $user_id = ( empty( $user_id ) ) ? $app_logged_users_id : $user_id;
-        $sql = "select e.*, ag.name as group_name from app_entity_1 e left join app_access_groups ag on ag.id=e.field_6 where  e.id='" . db_input( $user_id ) . "' and e.field_5=1";
+        $user_id = ( $user_id ) ? $user_id : $app_logged_users_id;
+        $where = ( is_int( $user_id ) ) ? 'e.id=' . db_input( $user_id ) : "field_12='$user_id'";
+        $sql = "SELECT e.*, ag.name AS group_name FROM app_entity_1 e LEFT JOIN app_access_groups ag ON ag.id=e.field_6 WHERE $where AND e.field_5=1";
         $user_query = db_query( $sql );
+        // print_rr($app_logged_users_id);
         if ( $user = db_fetch_array( $user_query ) )
         {
             if ( strlen( $user['field_10'] ) > 0 )
@@ -2783,7 +3118,7 @@ class core implements module
             db_query( $sql );
         }
     }
-    
+
     public function get_map_markers()
     {
         // print_rr('in get_map_markers function');
@@ -2989,5 +3324,57 @@ class core implements module
                 }
             }
         }
+    }
+
+    public static function is_logged_on()
+    {
+        global $is_logged_on;
+
+        $is_logged_on = false;
+        // print_rr($_COOKIE);
+        $session_id = ( isset( $_COOKIE['sid'] ) ) ? $_COOKIE['sid'] : '';
+        // print_rr("session id is $session_id");
+        // session_id( $session_id );
+        if ( empty( $session_id ) ) session_start();
+        // print_rr($_SESSION); 
+        // print_rr(session_id());       
+        // print_rr(session_name());
+        // print_rr(session_decode($session_id));
+        $logged_users_id = ( isset( $_SESSION['app_logged_users_id'] ) ) ? $_SESSION['app_logged_users_id'] : 0;
+        // print_rr("logged users id is $logged_users_id");
+        // print_rr("app session is registered: " . app_session_is_registered('app_logged_users_id'));
+        if ( isset( $_COOKIE['app_remember_user'] ) && isset( $_COOKIE['app_remember_pass'] ) )
+        {
+            $is_logged_on = true;
+            $user_name = base64_decode( $_COOKIE["app_remember_user"] );
+        }
+        else if ( $logged_users_id > 0 )
+        {
+            $is_logged_on = true;
+            $user_name = self::get_app_user_name( $logged_users_id );
+        }
+        else
+        {
+            // print_rr("app logged users id is 0 - $logged_users_id");
+
+            
+        }
+        if ( $is_logged_on ) self::set_app_user( $user_name );
+        // print_rr("is logged on is $is_logged_on");
+        return $is_logged_on;
+    }
+
+    public static function get_app_user_name( $user_id = false )
+    {
+        global $app_user, $app_logged_users_id;
+
+        // print_rr($app_user); print_rr($app_logged_users_id);
+        if ( !$user_id ) $user_id = $app_logged_users_id;
+        if ( isset( $app_user['username'] ) && !empty( $app_user['username'] ) ) return $app_user['username'];
+        if ( is_numeric( $user_id ) && $user_id > 0 )
+        {
+            $sql = "SELECT field_12 FROM app_entity_1 WHERE id=" . db_input( $user_id );
+            if ( $result = db_fetch_array( db_query( $sql ) ) ) return $result['field_12'];
+        }      
     }
 }
