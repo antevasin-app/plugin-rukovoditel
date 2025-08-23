@@ -1058,7 +1058,7 @@ class email_rules
                 $rules['send_to_emails'] = $emails; 
             }
             if ( $description ) $rules['description'] = $description;
-            print_rr($rules);
+            // print_rr($rules);
             $email_rules = new email_rules( $entity_id, $item_id );
             $email_rules->send_by_id_msg( $rules );
         }
