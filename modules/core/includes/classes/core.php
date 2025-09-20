@@ -55,7 +55,7 @@ class core implements module
         $this->set_modules();
         if ( isset( $app_user ) && $app_user['id'] > 0 )  
         {  
-            if ( !IS_MODULE_USER ) redirect_to( 'dashboard/access_forbidden' );
+            // if ( !IS_MODULE_USER ) redirect_to( 'dashboard/access_forbidden' );
             $this->app_user = $app_user;
             $this->user_id = $app_user['id'];
             $this->user_group_ids = $this->get_user_group_ids();
@@ -359,37 +359,6 @@ class core implements module
         }
     }
 
-    private function is_plugin_admin_()
-    {
-        if ( $this->app_user['group_id'] === 0 )
-        {
-            $this->is_system_admin = true;
-            $this->is_plugin_admin = true;
-            $this->is_module_user = true;
-        }
-        if ( false )
-        {
-            // check plugin settings
-            $this->is_plugin_admin = true;
-            $this->is_module_user = true;
-        }
-        if ( \guest_login::is_guest() )
-        {
-            $this->is_module_user = true;
-        }
-        return $this->is_plugin_admin;
-    }
-
-    public function is_system_admin_()
-    {
-        return $this->is_system_admin;
-    } 
-
-    public function is_module_user_()
-    {
-        return $this->is_module_user;
-    }
-
     public function get_user_settings()
     {
         global $app_logged_users_id;
@@ -406,7 +375,7 @@ class core implements module
         if ( empty( $this->user_settings ))
         {
             $this->user_settings = array();
-            if ( IS_SYSTEM_ADMIN )
+            if ( defined( 'IS_SYSTEM_ADMIN' ) && IS_SYSTEM_ADMIN )
             {
                 $admin_settings = array(
                     'error_reporting' => 0,  
@@ -443,7 +412,7 @@ class core implements module
 
     private function set_error_reporting()
     {
-        if ( IS_SYSTEM_ADMIN && $this->user_settings['error_reporting'] )
+        if ( defined( 'IS_SYSTEM_ADMIN' ) && IS_SYSTEM_ADMIN && $this->user_settings['error_reporting'] )
         {
             error_reporting( E_ALL );
             ini_set( 'display_errors', 1 );
@@ -1104,7 +1073,7 @@ class core implements module
                 }
             }
         }
-        // print_rr($function_items);
+        // print_rr(array_keys($function_items));
         if ( in_array( $app_action, array( 'form_single_field' ) ) ) return 1;
         $items = ( empty( $function_items ) ) ? array( 0 ) : array_keys( $function_items ); ;
         // print_rr('items in get_records_visibility_sql'); print_rr($items);
@@ -2885,7 +2854,6 @@ class core implements module
             
         }
         if ( $is_logged_on ) self::set_app_user( $user_name );
-        // print_rr("is logged on is $is_logged_on");
         return $is_logged_on;
     }
 

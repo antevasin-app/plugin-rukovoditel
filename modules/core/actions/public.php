@@ -34,5 +34,5 @@ if ( in_array( $app_module_action, $public_actions ) )
 }
 else
 {
-    die( '{"error":"access denied for the action you specified","data":{"function":"' . $app_module_action . '"}}' );
+    die( '{"error":"access denied for the action you specified in core actions","data":{"function":"' . $app_module_action . '"}}' );
 }

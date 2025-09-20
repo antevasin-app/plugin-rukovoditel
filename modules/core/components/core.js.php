@@ -2,23 +2,36 @@
 
     namespace Antevasin;
 
-    global $app_fields_cache, $app_session_token;
+    global $app_session_token, $is_logged_on;
 
+    // print_rr("in core.js.php is logged on is $is_logged_on");
+    $app_path_dir = ( true ) ? 'app/' : '';
+    $app_path = ( defined( 'APP_PATH' ) ) ? APP_PATH : '';
     $url = url_for( 'antevasin/core/', 'token=' . $app_session_token );
     $files_url = url_for( 'antevasin/core/files', 'token=' . $app_session_token );
     $core = new core();
     $entity_ajax_fields = $core->get_entiity_fields_info( 'entity_ajax', true );
     $entities = $core->get_entities( true );
+    $user_id = ( isset( $app_user['id'] ) ? $app_user['id'] : 0 );
+    $user_name = ( isset( $app_user['name'] ) ? $app_user['name'] : '' );
+    $username = ( isset( $app_user['username'] ) ? $app_user['username'] : '' );
+    $is_logged_on = ( $is_logged_on ) ? 'true' : 'false';
+    // $url_token_param = ( $is_logged_on ) ? "&token={$app_session_token}" : "";
+    // print_rr("in core.js.php is logged on is $is_logged_on url_token_param is $url_token_param");
 ?>
 
 var core = core || {
+    app_path: "<?php echo $app_path; ?>",
     url: "<?php echo $url; ?>",
     files_url: "<?php echo $files_url; ?>",
     plugin_path: "<?php echo PLUGIN_PATH; ?>",
     ajax_headers: {},    
-    user_id: <?php echo $app_user['id']; ?>,
-    user_name: "<?php echo $app_user['name']; ?>",
-    username: "<?php echo $app_user['username']; ?>",
+    user_id: <?php echo $user_id ?>,
+    user_name: "<?php echo $user_name ?>",
+    username: "<?php echo $username ?>",
+    is_logged_on: '<?php echo ( $is_logged_on ) ? 'true' : 'false' ?>',
+    url_token_param: '<?php echo ( $is_logged_on ) ? "&token={$app_session_token}" : "" ?>',
+    session_token: '<?php echo "$app_session_token" ?>',
     expand_pre:function() {
         $( 'pre' ).on( 'click', function() {  
             let height = $( this ).css( 'max-height' );   
@@ -117,6 +130,27 @@ var core = core || {
             core.log_ajax_error( jqXHR, textStatus, errorThrown );
         })
     },
+    ajax_promise_post:function( url, data, callback = this.console_response ) {
+        let settings = {
+            method: "POST",
+            url: url,
+            data: data,
+            headers: core.ajax_headers
+        }
+        if ( Object.keys( core.ajax_headers ).length > 0 ) {
+            settings.headers = core.ajax_headers;
+        }
+        const promise = $.ajax( settings )
+            .done( function( response ) {
+                callback( response );
+            })
+            .fail( function( jqXHR, textStatus, errorThrown ) {
+                // do something based on failure
+                core.log_ajax_error( jqXHR, textStatus, errorThrown );
+            });
+        core.ajax_headers = {}
+        return promise;
+    },    
     ajax_get:function( url, callback = this.console_response ) {
         let settings = {
             method: "GET",
@@ -134,6 +168,25 @@ var core = core || {
             core.log_ajax_error( jqXHR, textStatus, errorThrown );
         });
         core.ajax_headers = {}
+    },
+    ajax_promise_get:function( url, callback = this.console_response ) {
+        let settings = {
+            method: "GET",
+            url: url
+        }
+        if ( Object.keys( core.ajax_headers ).length > 0 ) {
+            settings.headers = core.ajax_headers;
+        }
+        const promise = $.ajax( settings )
+            .done( function( response ) {
+                callback( response );
+            })
+            .fail( function( jqXHR, textStatus, errorThrown ) {
+                // do something based on failure
+                core.log_ajax_error( jqXHR, textStatus, errorThrown );
+            });
+        core.ajax_headers = {}
+        return promise;
     },
     files:function( element ) {
         let action = $( element ).data( 'action' );
@@ -214,13 +267,40 @@ var core = core || {
             $( `#btn_submodal_edit_item_${field_id}` ).show()
         }        
     },
+    get_cookie:function( name, path = false ) {
+        console.log('in get_cookie function',name,path);
+        // Get all cookies as a string
+        var cookies = document.cookie.split( ';' );
+        
+        // Iterate through cookies
+        for ( var i = 0; i < cookies.length; i++ ) {
+            var cookie = $.trim( cookies[i] ); // Trim whitespace using jQuery
+            var cookieParts = cookie.split( '=' );
+            var cookieName = cookieParts[0];            
+            // Check if this is the cookie we're looking for
+            if ( cookieName === name ) {
+                // Get cookie value
+                var cookieValue = cookieParts.slice( 1 ).join( '=' );
+                console.log('found cookie',document.cookie,cookieName,cookieValue,cookieParts);
+                // Check if the cookie's path matches (optional, as document.cookie only returns accessible cookies)
+                // Note: document.cookie doesn't include path info, so path check requires server-side or manual tracking
+                if ( path ) {
+                    // Since document.cookie doesn't provide path info, you may need to maintain a map of cookie paths
+                    // This is a limitation of client-side JavaScript; path filtering is typically handled server-side
+                    console.warn("Path verification is limited client-side. Ensure the current page path matches the cookie path.");
+                }                
+                return decodeURIComponent(cookieValue); // Decode the cookie value
+            }
+        }        
+        return null; // Cookie not found
+    },
     get_action_params:function( url = null ) {
         // console.log('url',url);
         let query_string = ( url === null ) ? window.location.search : new URL( url ).search;
         let search_params = new URLSearchParams( query_string );
         let module = search_params.get( 'module' );
         let params = {};
-        console.log(search_params);
+        // console.log(search_params);
         for( const param of search_params ) {
             // console.log(param);
             let key = param[0];
@@ -229,7 +309,7 @@ var core = core || {
                 key = 'process_id';
             }
             if ( $( `#${key}` ).length == 0 ) {
-                console.log('create input as it does not exist',key);
+                // console.log('create input as it does not exist',key);
                 $( '.form-body' ).prepend( `<input type="hidden" id="${key}" name="${key}" value="${param[1]}">` );
             }
             params[param[0]] = param[1];
@@ -367,6 +447,21 @@ var core = core || {
         console.log(window_url,url);
         return url;
         // window.open( url, '_blank')
+    },
+    set_app_cookie:function() {
+        // console.log('in set_app_cookie function core app_path is ',core.app_path);
+        // if ( core.app_path.length === 0 ) core.set_cookie( `app_token`, '<?php echo $app_session_token ?>', 'Session', '/' );
+        core.set_cookie( `app_token`, '<?php echo $app_session_token ?>', 'Session', '/' )
+    },
+    set_cookie:function( name, value, days, path ) {
+        var expires = "";
+        if ( days ) {
+            var date = new Date();
+            date.setTime( date.getTime() + ( days * 24 * 60 * 60 * 1000 ) );
+            expires = "; expires=" + date.toUTCString();
+        }
+        var pathStr = path ? "; path=" + path : "";
+        document.cookie = name + "=" + encodeURIComponent( value ) + expires + pathStr;
     },
     set_required_fields:function( fields, remove = false ) {
         // console.log(fields);
@@ -516,104 +611,134 @@ var core = core || {
             }
         });
     },
-    populate_contact_fields:function( fields_obj ) {
-        let trigger_field_id = fields_obj.trigger_field_id;
-        let trigger_field = $( `#fields_${trigger_field_id}` );
-        trigger_field.on( 'change', function() {
-            let items_ids = $( this ).val();     
-            let url = `${core.url}&action=populate_contact_fields&field_id=${fields_obj.trigger_field_id}&items_ids=${items_ids}`;
-            let callback_ = function( response ) {
-                if ( response != '' ) {
-                    let response_obj = JSON.parse( response );
-                    if ( response_obj.success ) {
-                        let data = response_obj.data;
-                        // console.log(data.fields);
-                        // console.log('in callback function',data.fields);
-                        $.each( data.fields, function( field_id, items ) {
-                            // console.log(field_id,items);
-                            let field = $( `#fields_${field_id}` );
-                            if ( field.val() === null || field.val().length == 0 ) {
-                                // console.log(items);
-                                $.each( items, function( items_id, title ) {
-                                    let option_obj = {field_id: field_id, id: items_id, text: title};
-                                    // console.log(items_id,title,option_obj);
-                                    core.set_ajax_dropdown_value( option_obj );
-                                });
-                            } else if ( items === '' ) {
-                                // console.log('field already has a value and items is empty so clear fields');
-                                // field.val( null ).trigger( 'change' );
-                                $( `#fields_${field_id} option` ).remove();
-                            } else {
-                                console.log('field already has a value and items is not empty so add items',items);
-                                // $.each( items, function( items_id, title ) {
-                                //     let current_value = field.val();
-                                //     console.log('current value',current_value,'items id',items_id);
-                                // });
-                                Object.keys( items ).forEach( key => {
-                                    // Check if the option with this value (key) already exists in the Select2
-                                    if ( !field.find( `option[value="${key}"]` ).length ) {                                      
-                                        let option_obj = {field_id: field_id, id: key, text: items[key]};
-                                        core.set_ajax_dropdown_value(option_obj);
-                                    }
-                                });
+    populate_job_fields:function( fields_obj ) {
+        $.each( fields_obj, function( field_name, field_id ) {
+            let data = { 'fields': fields_obj };
+            $( `#fields_${field_id}` ).on( 'change', function() {
+                let items_ids = $( this ).val(); 
+                data['field_name'] = field_name;
+                data['field_id'] = field_id;
+                data['items_ids'] = items_ids;
+                let url = `${core.url}&action=populate_job_fields`;
+                core.ajax_post( url, data, function( response ) {
+                    // console.log('in populate_job_fields callback function',response);
+                    core.job_fields_customer( response, fields_obj );
+                })
+            })
+        });
+    },
+    populate_fields:function() {
+        console.log('in populate_fields function');
+        var shift = ctrl = false;
+        $( document ).on( 'keydown', function( event ) {
+            if ( event.shiftKey ) {
+                console.log('Shift key is pressed');
+                shift = true;
+            }
+            if ( event.ctrlKey ) {
+                console.log('Ctrl key is pressed');
+                ctrl = true;
+            }
+        });
+        let entity_ajax_fields = $( '.form-control.fieldtype_entity_ajax' );
+        $.each( entity_ajax_fields, function( index, element ) {
+            let field = $( element ).attr( 'id' );
+            console.log('field',element,field);
+            let data = { 'shift': shift, 'ctrl': ctrl };
+            $( `#${field}` ).on( 'change', function() {
+                let items_ids = $( this ).val(); 
+                // data['field_name'] = field_name;
+                data['field'] = field;
+                data['items_ids'] = items_ids;
+                let url = `${core.url}&action=populate_fields`;
+                core.ajax_post( url, data, function( response ) {
+                    console.log('in populate_job_fields callback function',response);
+                    // core.job_fields_customer( response, fields_obj );
+                })
+            })
+        });
+    },
+    job_fields_customer:function( response, fields_obj ) {
+        if ( response !== '' ) {
+            let response_obj = JSON.parse( response );
+            if ( response_obj.success ) {
+                let response_data = response_obj.data;
+                // console.log(response,data,data.customer_info);
+                if ( response_data == '' ) {
+                    $.each( fields_obj, function( field_name, field_id ) {
+                        // console.log('empty fields',field_name,field_id);
+                        $( `#fields_${field_id}` ).empty();
+                    });
+                }
+                $( `#fields_${fields_obj.customer_info}` ).val( response_data.customer_info );
+                $.each( response_data.fields, function( field_id, items ) {
+                    let field = $( `#fields_${field_id}` ); 
+                    field.off( 'change' );
+                    // Get current options in the Select2 dropdown
+                    let current_options = field.find( 'option' ).map( function() {
+                        return $( this ).val();
+                    }).get();            
+                    if ( field.val() === null || field.val().length === 0 ) {
+                        // Case 1: Field is empty, populate with new items
+                        $.each( items, function( items_id, title ) {
+                            let option_obj = { field_id: field_id, id: items_id, text: title };
+                            core.set_ajax_dropdown_value( option_obj );
+                        }); 
+                    } else if ( Object.keys( items ).length === 0 ) {
+                        // console.log('items is empty');
+                        field.empty().trigger( 'change' );
+                    } else {
+                        // Case 3: Field has values, update options
+                        // Remove options that are no longer in the response
+                        current_options.forEach( function( option_value ) {
+                            if ( !items.hasOwnProperty( option_value ) ) {
+                                field.find( `option[value="${option_value}"]` ).remove();
                             }
                         });
-                    }
-                }
-            }  
-            let callback = function(response) {
-                if ( response !== '' ) {
-                    let response_obj = JSON.parse( response );
-                    if ( response_obj.success ) {
-                        let data = response_obj.data;
-                        $.each( data.fields, function( field_id, items ) {
-                            let field = $( `#fields_${field_id}` );            
-                            // Get current options in the Select2 dropdown
-                            let current_options = field.find( 'option' ).map( function() {
-                                return $( this ).val();
-                            }).get();
-            
-                            if ( field.val() === null || field.val().length === 0 ) {
-                                // Case 1: Field is empty, populate with new items
-                                $.each( items, function( items_id, title ) {
-                                    let option_obj = { field_id: field_id, id: items_id, text: title };
-                                    core.set_ajax_dropdown_value( option_obj );
-                                });
-                            } else if ( Object.keys( items ).length === 0 ) {
-                                // Case 2: Items is empty, clear the field
-                                field.empty().trigger( 'change' );
+    
+                        // Add or update options from the response
+                        Object.keys( items ).forEach( key => {
+                            // Check if the option with this value (key) already exists
+                            if ( !field.find( `option[value="${key}"]` ).length) {
+                                let option_obj = { field_id: field_id, id: key, text: items[key] };
+                                core.set_ajax_dropdown_value( option_obj );
                             } else {
-                                // Case 3: Field has values, update options
-                                // Remove options that are no longer in the response
-                                current_options.forEach( function( option_value ) {
-                                    if ( !items.hasOwnProperty( option_value ) ) {
-                                        field.find( `option[value="${option_value}"]` ).remove();
-                                    }
-                                });
-            
-                                // Add or update options from the response
-                                Object.keys( items ).forEach( key => {
-                                    // Check if the option with this value (key) already exists
-                                    if ( !field.find( `option[value="${key}"]` ).length) {
-                                        let option_obj = { field_id: field_id, id: key, text: items[key] };
-                                        core.set_ajax_dropdown_value( option_obj );
-                                    } else {
-                                        // Update the text of existing option if necessary
-                                        let existing_option = field.find( `option[value="${key}"]` );
-                                        if ( existing_option.text() !== items[key] ) {
-                                            existing_option.text( items[key] );
-                                        }
-                                    }
-                                });            
-                                // Trigger change to refresh Select2
-                                field.trigger( 'change' );
+                                // Update the text of existing option if necessary
+                                let existing_option = field.find( `option[value="${key}"]` );
+                                if ( existing_option.text() !== items[key] ) {
+                                    existing_option.text( items[key] );
+                                }
                             }
-                        });
+                        });            
+                        // Trigger change to refresh Select2
+                        field.trigger( 'change' );
                     }
-                }
-            };
-            core.ajax_get(url, callback);
-        })
+                });
+                // console.log(response_data.fields,fields_obj);
+                const fields_obj_flippped = Object.fromEntries(
+                    Object.entries( fields_obj ).map( ( [key, value] ) => [value, key] )
+                );
+                // console.log(fields_obj_flippped);
+                $.each( response_data.fields, function( field_id, items ) {
+                    let data = { 'fields': fields_obj };
+                    $( `#fields_${field_id}` ).on( 'change', function() {
+                        let items_ids = $( this ).val(); 
+                        data['field_name'] = fields_obj_flippped[field_id];
+                        data['field_id'] = field_id;
+                        data['items_ids'] = items_ids;
+                        console.log(data);
+                        let url = `${core.url}&action=populate_job_fields`;
+                        core.ajax_post( url, data, function( response ) {
+                            // console.log('in populate_job_fields callback function',response);
+                            core.job_fields_customer( response, fields_obj );
+                        })
+                    })
+                });
+            }
+        }
+    },
+    job_fields_addresses:function( response, fields_obj ) {
+        console.log(response,fields_obj)
     },
     disable_ajax_dropdown:function( field_id ) {
         let field = $( `#fields_${field_id}` );
@@ -633,7 +758,7 @@ var core = core || {
         console.log('in manual_address function');
         let address_field = $( '#fields_557' );
         if ( address_field.val().length > 0 ) {
-            console.log('address field has a value',maps.address_fields);
+            // console.log('address field has a value');
         }
         if ( $( '#save_manual_address' ).length == 0 ) {
             $( '#fields_566_rendered_value' ).after( '<div style="clear: both;"><button id="save_manual_address" class="btn" type="button" style="margin-top: 5px;">Save Address</button></div>' )
@@ -683,238 +808,6 @@ var ui = ui || {
     }
 }
 
-var maps_ = maps_ || {
-    address_components: {},
-    address_fields: { 
-        street_address: {field_id: 562},
-        town_city: {field_id: 563}, 
-        state_region: {field_id: 564}, 
-        postcode: {field_id: 565}, 
-        country: {field_id: 566}
-    },
-    init_google:function() {
-        (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})
-        ({key: "AIzaSyCJue_fSK533hqpKHe5LSSkgizsG9mzyXU", v: "beta"});
-    },
-    add_google_address_lookup:function( fields_obj = {} ) {
-        // html font-size declaration here placeautocomplete setting font-size to .rem value
-        $( 'html' ).css( 'font-size', '20px' ); 
-        if ( fields_obj.on ) {
-            let on_field = ( Number.isInteger( fields_obj.on ) ) ? `#fields_${fields_obj.on}` : fields_obj.on;
-            var to_field = ( fields_obj.to ) ? fields_obj.to : fields_obj.on;
-            to_field = ( Number.isInteger( to_field ) ) ? `#fields_${to_field}` : to_field;
-            $( on_field ).after( '<div id="google_address_lookup" class="input-xlarge"></div>' )
-            if ( fields_obj.visibility  ) {
-                $( `.form-group-${fields_obj.lat}` ).toggle( fields_obj.visibility.lat )
-                $( `.form-group-${fields_obj.lng}` ).toggle( fields_obj.visibility.lng )
-            }
-            async function handle_place_selection( place ) {
-                await place.fetchFields({
-                    fields: [ "displayName", "addressComponents", "formattedAddress", "location" ],
-                });
-                const response_obj = place.toJSON();
-                maps.get_address_fields( response_obj.addressComponents );
-                const address = response_obj.formattedAddress;
-                // console.log(to_field,address);
-                $( to_field ).val( address );
-                if ( fields_obj.lat ) {
-                    $( `#fields_${fields_obj.lat}` ).val( response_obj.location.lat );                        
-                }
-                if ( fields_obj.lng ) {
-                    $( `#fields_${fields_obj.lng}` ).val( response_obj.location.lng );
-                }
-            }
-            async function init_map() {
-                await google.maps.importLibrary("places");
-                // get local users country code to add to google maps options
-                let local_users_country = 'uk'; // get this from location....
-                const options = {
-                    componentRestrictions: { country: [ local_users_country, plugin.country_code ] },
-                };
-                const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement( options );
-                $( '#google_address_lookup' ).html( placeAutocomplete )
-                    // Event listener for gmp-placeselect
-                placeAutocomplete.addEventListener('gmp-placeselect', async ({ place }) => {
-                    console.log('place selected',place);
-                    handle_place_selection( place );
-                });
-
-                // Event listener for mouse click on suggestions
-                document.addEventListener( 'click', function( event ) {
-                    console.log('click event',event);
-                    if ( event.target.closest( '.pac-item' ) ) {
-                        // console.log('i am here');
-                        // Wait a bit for the place to be updated
-                        setTimeout(async () => {
-                            const place = placeAutocomplete.getPlace();
-                            if ( place ) {
-                                handle_place_selection( place );
-                            }
-                        }, 100 ); // Small delay to ensure the place is available
-                    }
-                });
-                // document.addEventListener( 'gmp-placeselect', function( event ) {
-                //     console.log('gmp-placeselect',event);
-                // });
-                // placeAutocomplete.addEventListener( "gmp-placeselect", async ( { place } ) => {
-                //     console.log('gmp-placeselect',event);
-                //     await place.fetchFields({
-                //         fields: [ "displayName", "addressComponents", "formattedAddress", "location" ],
-                //     });
-                //     const response_obj = place.toJSON();
-                //     maps.get_address_fields( response_obj.addressComponents );
-                //     const address = response_obj.formattedAddress;
-                //     $( to_field ).val( address );
-                //     if ( fields_obj.lat ) {
-                //         $( `#fields_${fields_obj.lat}` ).val( response_obj.location.lat );                        
-                //     }
-                //     if ( fields_obj.lng ) {
-                //         $( `#fields_${fields_obj.lng}` ).val( response_obj.location.lng );
-                //     }
-                // });
-            }
-            init_map();
-        }
-    },
-    get_address_fields:function( fields_obj ) {
-        let address_components = {};
-        $.each( fields_obj, function( index, component ) {
-            $.each( component.types, function( index, type ) {
-                address_components[type] = { "long": component.longText, "short": component.shortText };
-            })
-        });
-        maps.address_components = address_components;
-        console.log(address_components);
-        let street_number = ( address_components.street_number ) ? address_components.street_number.long : '';
-        let route = ( address_components.route ) ? address_components.route.long : '';
-        maps.address_fields.street_address.value = street_number + ' ' + route;
-        maps.address_fields.town_city.value = ( address_components.locality ) ? address_components.locality.long : address_components.postal_town.long;
-        maps.address_fields.state_region.value = address_components.administrative_area_level_1.long;
-        maps.address_fields.postcode.value = address_components.postal_code.long;
-        maps.address_fields.country.value = address_components.country.long;
-        console.log(maps.address_fields);
-    },
-    buildContent:function( marker ) {
-        const content = document.createElement("div");    
-        content.classList.add("marker");
-        content.innerHTML = marker.html;
-        return content;
-    },
-    toggleHighlight:function( markerView, marker ) {
-        if ( markerView.content.classList.contains( "highlight" ) ) {
-            markerView.content.classList.remove( "highlight" );
-            markerView.zIndex = null;
-        } else {
-            markerView.content.classList.add( "highlight" );
-            markerView.zIndex = 1;
-        }
-    },
-    render:function( data ) {
-        // console.log('in maps render function');
-        if ( typeof google === 'object' && typeof google.maps === 'object' ) {
-            // console.log('google maps already loaded');            
-        } else {
-            maps.init_google();
-        }
-        const maps_style = ( data.style ) ? data.style : `${core.plugin_path}css/maps_style.css`;      
-        const zoom = ( data.zoom ) ? data.zoom : 11;
-        console.log(zoom);
-        if ( data.scripts ) {
-            $.each( data.scripts, function( index, script ) {
-                $.getScript( script, function() {
-                    // console.log(`${script} library loaded in maps render.`);
-                });
-            });
-        }
-        const maps_div = ( data.div ) ? data.div : `<div style="height: 600px; width: 100%" id="${data.name}"></div>`;
-        $( function() {
-            $( '#maps' ).append( maps_div );
-            $( '#maps' ).after( `<style id="maps_style"></style>` );
-            $( "#maps_style" ).load( maps_style );
-            render();
-        });
-        let render = function() {
-            // console.log('render map',data);
-            /**
-            * @license
-            * Copyright 2019 Google LLC. All Rights Reserved.
-            * SPDX-License-Identifier: Apache-2.0
-            */
-            async function init_map() {
-                // Request needed libraries.
-                const { Map } = await google.maps.importLibrary( "maps" );
-                const { AdvancedMarkerElement } = await google.maps.importLibrary( "marker" );
-                const center = data.center;
-                const map = new Map( document.getElementById( data.name ), {
-                    zoom: zoom,
-                    center,
-                    mapId: "c76f6a9d031f9da0",
-                    mapTypeControl: true,
-                });                
-                let render_map_markers = function( response ) {
-                    // console.log(response);
-                    if ( response != '') {
-                        let response_obj = JSON.parse( response );
-                        if ( response_obj.success ) {
-                            // console.log(response_obj.data)
-                            let data = response_obj.data;
-                            $.each( data, function( index, marker ) {
-                                let position = {lat: parseFloat( marker.position.lat ),lng: parseFloat( marker.position.lng )}
-                                // console.log(position)
-                                const AdvancedMarkerElement = new google.maps.marker.AdvancedMarkerElement({
-                                    map,
-                                    content: maps.buildContent( marker ),
-                                    position: position,
-                                    title: marker.description,
-                                });                            
-                                AdvancedMarkerElement.addListener( "gmp-click", () => {
-                                    maps.toggleHighlight( AdvancedMarkerElement, marker );
-                                });
-                            });
-                        }
-                    }
-                }
-                core.ajax_post( data.url, data.markers, render_map_markers );
-            }              
-            init_map();           
-        }
-    },
-    get_location:function( callback ) {
-        console.log('in core get_location');
-        if ( navigator.geolocation ) {
-            navigator.geolocation.getCurrentPosition( callback );
-        } else {
-            console.log("Geolocation is not supported by this browser.");
-            return {error: "Geolocation is not supported by this browser."};
-        }
-    },
-    open_map_directions:function( element ) {
-        // console.log(element)
-        let destination = $( element ).data('destination');
-        let url = `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${destination}`;
-        // console.log(url);
-        window.open( url, '_blank' ).focus();
-    },
-    directions_btn_action:function() {
-        $( '.directions-btn' ).on( 'click', function() {
-            maps.open_map_directions( this );
-            // console.log(this)
-            // let destination = $( this ).data('destination');
-            // let url = `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${destination}`;
-            // console.log(url);
-            // window.open( url, '_blank' ).focus();
-        });
-    },
-    get_google_direction_url:function( data ) {
-        // see https://developers.google.com/maps/documentation/urls/get-started#directions-action
-        let origin = `${data.origin.lat},${data.origin.lng}`;
-        let destination = `${data.destination.lat},${data.destination.lng}`;
-        let mode = ( data.mode ) ? `&travelmode=${data.travel_mode}` : '';
-        let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${mode}`;
-        return url;
-    }
-}
-
 let placesLoaded = false;
 
 // Load Google Maps Places API dynamically
@@ -948,7 +841,7 @@ window.initPlacesCallback = function( fields_obj ) {
     placesLoaded = true;
 };
 
-var maps = maps || {
+var google_places = google_places || {
     // Initialize Places API and dynamically create input
     initPlaces: async function() {
         // console.log('in initPlaces function');
@@ -1066,4 +959,5 @@ var entity = entity || {
 
 $( function() {
     core.expand_pre();
+    core.set_app_cookie();
 });
