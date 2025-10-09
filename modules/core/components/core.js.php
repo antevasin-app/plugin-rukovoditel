@@ -29,7 +29,7 @@ var core = core || {
     user_id: <?php echo $user_id ?>,
     user_name: "<?php echo $user_name ?>",
     username: "<?php echo $username ?>",
-    is_logged_on: '<?php echo ( $is_logged_on ) ? 'true' : 'false' ?>',
+    is_logged_on: '<?php echo ( $is_logged_on ) ?>',
     url_token_param: '<?php echo ( $is_logged_on ) ? "&token={$app_session_token}" : "" ?>',
     session_token: '<?php echo "$app_session_token" ?>',
     expand_pre:function() {
@@ -448,10 +448,23 @@ var core = core || {
         return url;
         // window.open( url, '_blank')
     },
-    set_app_cookie:function() {
-        // console.log('in set_app_cookie function core app_path is ',core.app_path);
+    set_app_session:function() {
+        console.log('in set_app_session function core app_path is ',core.app_path,'<?php echo $app_session_token ?>');
+        if ( core.app_path === '' ) {
+            const data = {
+                app_token: '<?php echo $app_session_token ?>'
+            };
+              
+            // Loop through the object to set each key-value pair
+            for ( const [key, value] of Object.entries( data ) ) {
+                sessionStorage.setItem( key, value );
+            }
+        }
+    },
+    set_app_cookie:function( key, value, expires, path ) {
+        console.log('in set_app_cookie function core app_path is ',core.app_path,'<?php echo $app_session_token ?>');
         // if ( core.app_path.length === 0 ) core.set_cookie( `app_token`, '<?php echo $app_session_token ?>', 'Session', '/' );
-        core.set_cookie( `app_token`, '<?php echo $app_session_token ?>', 'Session', '/' )
+        if ( core.app_path === '' ) core.set_cookie( key, value, expires, path );
     },
     set_cookie:function( name, value, days, path ) {
         var expires = "";
@@ -954,10 +967,9 @@ var google_places = google_places || {
 
 var entity = entity || {
     ajax_fields: <?php echo $entity_ajax_fields ?>,
-    entities: <?php echo $entities ?>,
+    // entities: <?php echo $entities ?>,
 }
 
 $( function() {
     core.expand_pre();
-    core.set_app_cookie();
 });
