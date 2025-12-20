@@ -36,7 +36,7 @@ var plugin = plugin || {
         }
     },
     on_submodal_load:function() {
-        // console.log('on submodal load',plugin.form.sub_items)
+        // console.log('on submodal load',plugin.form)
         let sub_items_form = $( '#sub_items_form' );
         // console.log('sub items form',sub_items_form)
         plugin.wait_until_exists( '#sub_items_form' ).then( function( element ) {
@@ -49,11 +49,11 @@ var plugin = plugin || {
                 let input = $( element );
                 let value = input.val();
                 info[input.prop( 'id' )] = input.val();
-            });   
-            core.items_form( info.path );
+            }); 
+            plugin.items_form( info.path );
             plugin.form['sub_items'] = info;
             console.log(`sub modal has loaded and exists - sub items entities id is ${plugin.form.sub_items.path} - entities id is ${plugin.form.entities_id}`,entity.ajax_fields) 
-            if ( true ) { // field forms exists
+            if ( false ) { // field forms exists
                 let forms_field_id = 581;
                 let entity_name = entity.entities[plugin.form.entities_id]['name'];
                 core.set_ajax_dropdown_value( {field_id:forms_field_id,id:plugin.form.entities_id,text:entity_name} );
@@ -105,8 +105,10 @@ var plugin = plugin || {
                 js = `process_${this.form['process_id']}`;
                 break;
             case 'items_form':
+                // console.log('form is items form - entities id is',this.form['entities_id'])
                 js = `entity_${entities_id}`;
-                this.run_function( 'items_form' );
+                // this.run_function( 'items_form' );
+                plugin.items_form( entities_id );
                 break;
             case 'form_single_field':
                 js = 'form_single_field';
@@ -118,7 +120,6 @@ var plugin = plugin || {
         this.run_function( js );
     },
     run_function:function( function_name ) {
-        // console.log('js function to run',function_name,this.modules)
         $.each( this.modules, function( name, info ) {
             if ( window[name] ) {
                 if ( name != '' && typeof window[name][function_name] === 'function' ) {
@@ -135,6 +136,29 @@ var plugin = plugin || {
         }
         let url = `${this.url}&action=${module}`;
         core.ajax_get( url, callback );
+    },
+    items_form:function( entities_id = plugin.form.entities_id ) {
+        console.log('in service items_form function',plugin.form.entities_id,entities_id,entity);
+        if ( entity.ajax_fields.entity.name[entities_id] ) {
+            // console.log(`entity ajax fields entity name for entities id`,entities_id,entity)
+            let status_ajax_fields = Object.fromEntries(
+                Object.entries( entity.ajax_fields.entity.name[entities_id] ).filter( ( [key] ) => key.includes( 'Status' ) )
+            );
+            // console.log('status ajax fiels',status_ajax_fields,'object keys length',Object.keys(status_ajax_fields).length);
+            if ( Object.keys( status_ajax_fields ).length > 0 ) service.filter_status_field( entities_id );
+            core.on_click_handler( '.btn-submodal-open', core.submodal_load );
+            // $( '.btn-submodal-open' ).on( 'click', function() {
+            //     console.log('clicked on submodal');
+            //     plugin.on_submodal_load();
+            // });
+            // $.each( status_ajax_fields, function( title, fields ) {
+            //     console.log( title, fields );
+            //     $.each( fields, function( field_id, field ) {
+            //         console.log( field_id, field );
+                    
+            //     });
+            // });
+        }
     },
     get_form:function() {
         plugin.form = {}

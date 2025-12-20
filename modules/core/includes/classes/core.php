@@ -611,7 +611,7 @@ class core implements module
     {
         $sql = "SELECT * FROM app_fields WHERE type LIKE 'fieldtype_$type'";
         $user_query = db_query( $sql );
-        $fields_by_entity = $fields_by_id = $fields_by_type = $fields_by_name = array();
+        $fields_by_entity = $fields_by_entity_type = $fields_by_entity_name = $fields_by_id = $fields_by_type = $fields_by_name = array();
         while (  $results = db_fetch_array( $user_query ) )
         {
             $fields_by_entity[$results['entities_id']][$results['id']] = $results;
@@ -2059,7 +2059,6 @@ class core implements module
     {      
         $core_token = $this->config->token;
         $script = <<<SCRIPT
-        const repos_url = `https://api.github.com/repos/`
         let modules = $( `.installed_modules` );
         let get_branches = function( response, module_name, private, source ) {
             // console.log(response,module_name,source)
@@ -2074,7 +2073,7 @@ class core implements module
                     let commit_url = branch.commit.url;
                     $( '#module_branches_' + module_name ).append( '<option value="' + branch_name + '" data-module="' + module_name + '" data-branch_zip_url="' + branch_zip_url + '" data-commit_sha="' + sha + '" data-commit_date="' + commit_date + '" data-commit_url="' + commit_url +'">' + branch_name + '</option>' );
                 }
-                let branch_commit_url = repos_url + source + '/commits/' + branch_name
+                let branch_commit_url = core.repos_url + source + '/commits/' + branch_name
                 let module_token = $( '#installed_module_' + module_name ).data( 'source_token' );
                 if ( module_name === 'core' ) {
                     module_token = '$core_token';
@@ -2088,7 +2087,7 @@ class core implements module
             let module = $( element );
             let module_name = module.data( 'module' );
             let source = module.data( 'source' );
-            let url = repos_url + source + "/branches";
+            let url = core.repos_url + source + "/branches";
             let module_token = module.data( 'source_token' );
             let private = module.data( 'private' );
             if ( private && module_token == '' ) {
@@ -2647,32 +2646,34 @@ class core implements module
 
         $is_logged_on = false;
         // print_rr($_COOKIE);
-        $session_id = ( isset( $_COOKIE['sid'] ) ) ? $_COOKIE['sid'] : '';
+        // $session_id = ( isset( $_COOKIE['sid'] ) ) ? $_COOKIE['sid'] : '';
         // print_rr("session id is $session_id");
         // session_id( $session_id );
-        if ( empty( $session_id ) ) session_start();
+        // if ( empty( $session_id ) ) session_start();
         // print_rr($_SESSION); 
         // print_rr(session_id());       
         // print_rr(session_name());
         // print_rr(session_decode($session_id));
-        $logged_users_id = ( isset( $_SESSION['app_logged_users_id'] ) ) ? $_SESSION['app_logged_users_id'] : 0;
+        // $logged_users_id = ( isset( $_SESSION['app_logged_users_id'] ) ) ? $_SESSION['app_logged_users_id'] : 0;
         // print_rr("logged users id is $logged_users_id");
         // print_rr("app session is registered: " . app_session_is_registered('app_logged_users_id'));
         if ( isset( $_COOKIE['app_remember_user'] ) && isset( $_COOKIE['app_remember_pass'] ) )
         {
             $is_logged_on = true;
             $user_name = base64_decode( $_COOKIE["app_remember_user"] );
+            self::set_app_user( $user_name );
         }
-        else if ( $logged_users_id > 0 )
-        {
-            $is_logged_on = true;
-            $user_name = self::get_app_user_name( $logged_users_id );
-        }
-        else
-        {
-            // print_rr("app logged users id is 0 - $logged_users_id");            
-        }
-        if ( $is_logged_on ) self::set_app_user( $user_name );
+        // else if ( $logged_users_id > 0 )
+        // {
+        //     $is_logged_on = true;
+        //     $user_name = self::get_app_user_name( $logged_users_id );
+        // }
+        // else
+        // {
+        //     // print_rr("app logged users id is 0 - $logged_users_id");            
+        // }
+        // if ( $is_logged_on ) self::set_app_user( $user_name );
+        // print_rr("is logged on is $is_logged_on");
         return $is_logged_on;
     }
 

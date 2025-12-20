@@ -3,7 +3,7 @@
 namespace Antevasin;
 
 $index = new index( $core );
-$index->set_title( 'Antevasin Plugin', 'Index Page Title Link - remove if not needed' );
+$index->set_title( 'Antevasin Plugin' );
 $core_module_tabs = array(    
     array(
         'name' => 'plugin',

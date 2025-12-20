@@ -32,6 +32,7 @@ var core = core || {
     is_logged_on: '<?php echo ( $is_logged_on ) ?>',
     url_token_param: '<?php echo ( $is_logged_on ) ? "&token={$app_session_token}" : "" ?>',
     session_token: '<?php echo "$app_session_token" ?>',
+    repos_url:`https://api.github.com/repos/`,
     expand_pre:function() {
         $( 'pre' ).on( 'click', function() {  
             let height = $( this ).css( 'max-height' );   
@@ -103,7 +104,50 @@ var core = core || {
             $( `#CFG_MODULE_${module_name}_CONFIG` ).val( config_json );
             $( '#cfg' ).submit();
         });
+        // get the module branches if source is available
+        if ( $('#source').length > 0 ) {
+            ( async () => {                
+                try {
+                    const branches = await core.get_source_branches(); 
+                    console.log('Fetched branches:', branches);
+
+                    if (Array.isArray(branches) && branches.length > 0) {
+                        const branch_list = branches
+                            .map(branch => branch.name)
+                            .join(', ');
+                        $( '#module_branches' ).html(branch_list);
+                    } else {
+                        $( '#module_branches' ).html('<em>No branches found</em>');
+                    }
+                } catch ( error ) {
+                    console.error('Failed to load branches:', error);
+                    $('#module_branches').html('<em>Error loading branches</em>');
+                }
+            })();                      
+        }
     },    
+    get_source_branches: async function() {
+        const source = $('#source').data('source');
+        if ( !source ) {
+            console.warn('No source data found');
+            return [];
+        }    
+        const branches_url = `${core.repos_url}${source}/branches`;
+        const token = $('#module_token'); 
+        if ( token.length > 0 && token.val().trim() !== '' ) {
+            let module_token = token.val().trim();
+            core.ajax_headers = {'Authorization': 'Bearer ' + module_token}
+        }
+        console.log('Fetching branches from:', branches_url);    
+        try {
+            const branches = await core.ajax_promise_get( branches_url );
+            console.log('Branches received:', branches);
+            return branches; // should be array like [{name: "main", ...}, ...]
+        } catch (error) {
+            console.error('Error fetching branches:', error);
+            return [];
+        }
+    },
     log_ajax_error:function( jqXHR, textStatus, errorThrown ) {
         console.log({"error_thrown":errorThrown,"status":textStatus,"object":jqXHR});
         if ( $( '#api_error' ).length > 0 ) {
@@ -134,8 +178,7 @@ var core = core || {
         let settings = {
             method: "POST",
             url: url,
-            data: data,
-            headers: core.ajax_headers
+            data: data
         }
         if ( Object.keys( core.ajax_headers ).length > 0 ) {
             settings.headers = core.ajax_headers;
@@ -369,20 +412,6 @@ var core = core || {
         }
         // console.log('params',params);
         return params;
-    },
-    get_status_field_value_info:function( field_id ) {
-        // console.log('in get_status_field_value_info',field_id);
-        // look up the status field value and see if it is a system status
-        let status_field = $( `#fields_${field_id}` );
-        let url = `${core.url}&action=get_status_field_value_info&status_id=${status_field.val()}`;
-        let callback = function( response ) {
-            // console.log('in callback function',response);
-            if ( response != '' ) {
-                let response_obj = JSON.parse( response );
-                core.sub_modal_visibility( field_id, response_obj.data.system );
-            }
-        }
-        core.ajax_get( url, callback );
     },
     get_reports_id:function() {
         var reports_id = 0;
@@ -623,135 +652,6 @@ var core = core || {
                     break;
             }
         });
-    },
-    populate_job_fields:function( fields_obj ) {
-        $.each( fields_obj, function( field_name, field_id ) {
-            let data = { 'fields': fields_obj };
-            $( `#fields_${field_id}` ).on( 'change', function() {
-                let items_ids = $( this ).val(); 
-                data['field_name'] = field_name;
-                data['field_id'] = field_id;
-                data['items_ids'] = items_ids;
-                let url = `${core.url}&action=populate_job_fields`;
-                core.ajax_post( url, data, function( response ) {
-                    // console.log('in populate_job_fields callback function',response);
-                    core.job_fields_customer( response, fields_obj );
-                })
-            })
-        });
-    },
-    populate_fields:function() {
-        console.log('in populate_fields function');
-        var shift = ctrl = false;
-        $( document ).on( 'keydown', function( event ) {
-            if ( event.shiftKey ) {
-                console.log('Shift key is pressed');
-                shift = true;
-            }
-            if ( event.ctrlKey ) {
-                console.log('Ctrl key is pressed');
-                ctrl = true;
-            }
-        });
-        let entity_ajax_fields = $( '.form-control.fieldtype_entity_ajax' );
-        $.each( entity_ajax_fields, function( index, element ) {
-            let field = $( element ).attr( 'id' );
-            console.log('field',element,field);
-            let data = { 'shift': shift, 'ctrl': ctrl };
-            $( `#${field}` ).on( 'change', function() {
-                let items_ids = $( this ).val(); 
-                // data['field_name'] = field_name;
-                data['field'] = field;
-                data['items_ids'] = items_ids;
-                let url = `${core.url}&action=populate_fields`;
-                core.ajax_post( url, data, function( response ) {
-                    console.log('in populate_job_fields callback function',response);
-                    // core.job_fields_customer( response, fields_obj );
-                })
-            })
-        });
-    },
-    job_fields_customer:function( response, fields_obj ) {
-        if ( response !== '' ) {
-            let response_obj = JSON.parse( response );
-            if ( response_obj.success ) {
-                let response_data = response_obj.data;
-                // console.log(response,data,data.customer_info);
-                if ( response_data == '' ) {
-                    $.each( fields_obj, function( field_name, field_id ) {
-                        // console.log('empty fields',field_name,field_id);
-                        $( `#fields_${field_id}` ).empty();
-                    });
-                }
-                $( `#fields_${fields_obj.customer_info}` ).val( response_data.customer_info );
-                $.each( response_data.fields, function( field_id, items ) {
-                    let field = $( `#fields_${field_id}` ); 
-                    field.off( 'change' );
-                    // Get current options in the Select2 dropdown
-                    let current_options = field.find( 'option' ).map( function() {
-                        return $( this ).val();
-                    }).get();            
-                    if ( field.val() === null || field.val().length === 0 ) {
-                        // Case 1: Field is empty, populate with new items
-                        $.each( items, function( items_id, title ) {
-                            let option_obj = { field_id: field_id, id: items_id, text: title };
-                            core.set_ajax_dropdown_value( option_obj );
-                        }); 
-                    } else if ( Object.keys( items ).length === 0 ) {
-                        // console.log('items is empty');
-                        field.empty().trigger( 'change' );
-                    } else {
-                        // Case 3: Field has values, update options
-                        // Remove options that are no longer in the response
-                        current_options.forEach( function( option_value ) {
-                            if ( !items.hasOwnProperty( option_value ) ) {
-                                field.find( `option[value="${option_value}"]` ).remove();
-                            }
-                        });
-    
-                        // Add or update options from the response
-                        Object.keys( items ).forEach( key => {
-                            // Check if the option with this value (key) already exists
-                            if ( !field.find( `option[value="${key}"]` ).length) {
-                                let option_obj = { field_id: field_id, id: key, text: items[key] };
-                                core.set_ajax_dropdown_value( option_obj );
-                            } else {
-                                // Update the text of existing option if necessary
-                                let existing_option = field.find( `option[value="${key}"]` );
-                                if ( existing_option.text() !== items[key] ) {
-                                    existing_option.text( items[key] );
-                                }
-                            }
-                        });            
-                        // Trigger change to refresh Select2
-                        field.trigger( 'change' );
-                    }
-                });
-                // console.log(response_data.fields,fields_obj);
-                const fields_obj_flippped = Object.fromEntries(
-                    Object.entries( fields_obj ).map( ( [key, value] ) => [value, key] )
-                );
-                // console.log(fields_obj_flippped);
-                $.each( response_data.fields, function( field_id, items ) {
-                    let data = { 'fields': fields_obj };
-                    $( `#fields_${field_id}` ).on( 'change', function() {
-                        let items_ids = $( this ).val(); 
-                        data['field_name'] = fields_obj_flippped[field_id];
-                        data['field_id'] = field_id;
-                        data['items_ids'] = items_ids;
-                        console.log(data);
-                        let url = `${core.url}&action=populate_job_fields`;
-                        core.ajax_post( url, data, function( response ) {
-                            // console.log('in populate_job_fields callback function',response);
-                            core.job_fields_customer( response, fields_obj );
-                        })
-                    })
-                });
-            }
-        }
-    },
-    job_fields_addresses:function( response, fields_obj ) {
-        console.log(response,fields_obj)
     },
     disable_ajax_dropdown:function( field_id ) {
         let field = $( `#fields_${field_id}` );

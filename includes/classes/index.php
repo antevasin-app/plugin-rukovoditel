@@ -35,12 +35,12 @@ class index
         $tabs = array( 
             array(
                 'name' => 'module',
-                'description' => 'tab module description',
+                'description' => ( isset( $module_info->module->tab ) ) ? $module_info->module->tab : '',
                 'sections' => array(
                     array(
                         'title' => 'Module Settings',
                         // 'id' => 'testing',
-                        'description' => 'section module settings description',
+                        'description' => ( isset( $module_info->module->settings ) ) ? $module_info->module->settings : '',
                         'groups' => array(
                             array(
                                 'field_class' => 'plugin-info',
@@ -97,27 +97,32 @@ class index
                 'content' => $this->module->module_management()
             );
         }
-        if ( isset( $this->module->get_info()->source ) )
+        if ( isset( $module_info->source ) )
         {
             $tabs[0]['sections'][0]['groups'][] = array(
                 'field_class' => 'plugin-info',
                 'label' => 'Source File',
                 'field' => $this->get_repository_link()
             );
-        } 
-        if ( $private || $module_name == 'core' )
-        {
             $tabs[0]['sections'][0]['groups'][] = array(
                 'field_class' => 'plugin-info',
-                'label' => 'Token',
-                'field' => $form->add_tag( 'input', 'module[token]', null, $token, array( 'size' => 'x-large' ) )
+                'label' => 'Branches',
+                'field' => '<div id="module_branches"></div>'
             );
-            $tabs[0]['sections'][0]['groups'][] = array(
-                'field_class' => 'plugin-info',
-                'label' => 'Token Expiry',
-                'field' => $form->add_tag( 'input', 'module[token_expiry]', null, $config->token_expiry, array( 'size' => 'medium' ) )
-            );          
-        }
+            if ( $private )
+            {
+                $tabs[0]['sections'][0]['groups'][] = array(
+                    'field_class' => 'plugin-info',
+                    'label' => 'Token - ',
+                    'field' => $form->add_tag( 'input', 'module[token]', null, $token, array( 'size' => 'x-large' ) )
+                );
+                $tabs[0]['sections'][0]['groups'][] = array(
+                    'field_class' => 'plugin-info',
+                    'label' => 'Token Expiry',
+                    'field' => $form->add_tag( 'input', 'module[token_expiry]', null, $config->token_expiry, array( 'size' => 'medium' ) )
+                );          
+            }
+        } 
         $notes = ( isset( $config->notes ) ) ? $config->notes : '';
         $tabs[0]['sections'][0]['groups'][] = array(
             'label' => 'Module Notes',
@@ -167,6 +172,6 @@ class index
     private function get_repository_link()
     {
         $source = $this->module->get_info()->source;
-        return '<div id="repository"><a id="source" href="https://github.com/' . $source . '" target="_blank">' . $source . '</a></div>';
+        return '<div id="repository"><a id="source" href="https://github.com/' . $source . '" target="_blank" data-source="' . $source . '">' . $source . '</a></div>';
     }
 }
