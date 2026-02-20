@@ -113,7 +113,7 @@ class index
             {
                 $tabs[0]['sections'][0]['groups'][] = array(
                     'field_class' => 'plugin-info',
-                    'label' => 'Token - ',
+                    'label' => 'Token',
                     'field' => $form->add_tag( 'input', 'module[token]', null, $token, array( 'size' => 'x-large' ) )
                 );
                 $tabs[0]['sections'][0]['groups'][] = array(

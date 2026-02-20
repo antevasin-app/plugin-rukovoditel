@@ -6,7 +6,7 @@
 
     // print_rr("in core.js.php is logged on is $is_logged_on");
     $app_path_dir = ( true ) ? 'app/' : '';
-    $app_path = ( defined( 'APP_PATH' ) ) ? APP_PATH : '';
+    // $app_path = ( defined( 'APP_PATH' ) ) ? APP_PATH : '';
     $url = url_for( 'antevasin/core/', 'token=' . $app_session_token );
     $files_url = url_for( 'antevasin/core/files', 'token=' . $app_session_token );
     $core = new core();
@@ -19,6 +19,10 @@
     // $url_token_param = ( $is_logged_on ) ? "&token={$app_session_token}" : "";
     // print_rr("in core.js.php is logged on is $is_logged_on url_token_param is $url_token_param");
 ?>
+
+// app_modal_open_callbacks.push( function() {
+//     console.log('running core module app_modal_open_callback');
+// });
 
 var core = core || {
     app_path: "<?php echo $app_path; ?>",

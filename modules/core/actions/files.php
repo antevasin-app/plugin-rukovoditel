@@ -29,7 +29,7 @@ function install( $module )
     // print_rr("installing source files for module $module_name - action is $action");
     $file_url = $data['file_url'];
     $private = $data['private'];
-    $temp_dir = 'tmp' . DIRECTORY_SEPARATOR . 'plugin' . DIRECTORY_SEPARATOR;
+    $temp_dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'antevasin_plugin' . DIRECTORY_SEPARATOR;
     if ( file_exists( $temp_dir ) ) remove_dir( $temp_dir );
     mkdir( $temp_dir, 0775 );
     $zip_filename = ( ( $module_name == 'core' ) ? PLUGIN_NAME : $module_name );
@@ -67,6 +67,8 @@ function install( $module )
         die( '{"error":"CURL error getting file from server", "data":{"download_url":"' . $file_url . '","curl_errno":"' . curl_errno( $ch ) . '", "http":"' . trim( $curl_error[1] ) . '", "error_msg":"' . $curl_error[0] . '"}}' ); 
         // die("Curl Error :- " . curl_error( $ch ));
     }   
+    fclose( $local_zip_resource );
+    curl_close( $ch );
     $zip = new \ZipArchive;
     $res = $zip->open( $local_zip_file, \ZipArchive::CREATE );
     if ( $res === true )  
@@ -105,6 +107,10 @@ function install( $module )
         $new_zip->close();        
         if ( $action == 'download' )
         {
+            $web_tmp_dir = 'tmp' . DIRECTORY_SEPARATOR . 'plugin' . DIRECTORY_SEPARATOR;
+            if ( !file_exists( $web_tmp_dir ) ) mkdir( $web_tmp_dir, 0775, true );
+            $web_zip_file = $web_tmp_dir . $zip_filename . '.zip';
+            copy( $new_zip_filename, $web_zip_file );
             $file_url = url_for_file( 'tmp/plugin/' . $zip_filename . '.zip' );
             die( '{"success":"downloading file", "download_url":"' . $file_url . '"}' ); 
         }
@@ -148,14 +154,19 @@ function remove_dir( $dir )
     $files = new \RecursiveIteratorIterator( $it, \RecursiveIteratorIterator::CHILD_FIRST );
     foreach( $files as $file ) 
     {
-        if ( $file->isDir() )
+        $path = $file->getPathname();
+        if ( $file->isLink() ) 
         {
-            rmdir( $file->getPathname() );
+            @unlink( $path );
+        } 
+        elseif ( $file->isDir() )
+        {
+            @rmdir( $path );
         } 
         else 
         {
-            unlink( $file->getPathname() );
+            @unlink( $path );
         }
     }
-    rmdir( $dir );
+    @rmdir( $dir );
 }

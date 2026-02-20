@@ -13,3 +13,7 @@
     margin-right: 10px;
     cursor: pointer;
 }
+
+.ui-sortable-placeholder {
+    height: auto !important;  /* Allows jQuery UI's dynamic height calculation to work */
+}

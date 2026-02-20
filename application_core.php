@@ -6,7 +6,6 @@ namespace Antevasin;
 // ini_set( 'display_errors', 1 );
 // ini_set( 'display_startup_errors', 1 );
 // ini_set( 'error_reporting', E_ALL ); 
-
 $plugin_name = basename( __DIR__ );
 define( 'PLUGIN_NAME', $plugin_name );
 define ( 'PLUGIN_PATH', 'plugins/' . $plugin_name . '/');

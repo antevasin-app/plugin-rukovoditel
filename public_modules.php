@@ -4,7 +4,6 @@ namespace Antevasin;
 
 // for adding to $allowed_modules array via the plugin and its modules
 // e.g. $allowed_modules[] = 'antevasin/core/my_public_module';
-
 $plugin_name = basename( __DIR__ );
 $modules = glob( 'plugins/' . $plugin_name . '/modules/*', GLOB_ONLYDIR );
 $public_actions = array();

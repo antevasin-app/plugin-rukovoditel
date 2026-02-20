@@ -1297,7 +1297,7 @@ class core implements module
         if ( !empty( $where_sql_or ) )
         {
             $where_and = ( empty( $where_sql_and ) ) ? '' : implode( ' AND ', $where_sql_and );            
-            $where_or = ( empty( $where_sql_or ) ) ? '' : ( ( empty( $where_and ) ) ? implode( ' OR ', $where_sql_or ) : 'AND ' . implode( ' OR ', $where_sql_or ) );
+            $where_or = ( empty( $where_and ) ) ? implode( ' OR ', $where_sql_or ) : 'AND ' . implode( ' OR ', $where_sql_or );
             // $where_or = implode( ' OR ', $where_sql_or );
             // $sql = "SELECT * FROM app_entity_$field_entity_id WHERE $where_and AND ( $where_or )";
             $sql = "SELECT * FROM app_entity_$field_entity_id WHERE $where_and $where_or";
@@ -1942,7 +1942,7 @@ class core implements module
                 $release_url = 'https://api.github.com/repos/' . $source . '/zipball/v' . $version;
                 $token = ( isset( $module['config']['token'] ) && !empty( $module['config']['token'] ) ) ? $module['config']['token'] : '';
                 $private = ( isset( $module['info']['private'] ) ) ? 1 : 0;
-                if ( $private && empty( $token ) ) $set_token = true;
+                if ( $module_name != 'core' && $private && empty( $token ) ) $set_token = true;
                 $download = <<<DOWNLOAD
                     <a class="action" data-action="download" data-module="$module_name" onclick="core.files( this )"><i class="fa fa-download"></i></a>
                 DOWNLOAD;
@@ -2058,7 +2058,7 @@ class core implements module
     public function get_source_script()
     {      
         $core_token = $this->config->token;
-        $script = <<<SCRIPT
+        $script = sprintf( <<<SCRIPT
         let modules = $( `.installed_modules` );
         let get_branches = function( response, module_name, private, source ) {
             // console.log(response,module_name,source)
@@ -2078,7 +2078,7 @@ class core implements module
                 if ( module_name === 'core' ) {
                     module_token = '$core_token';
                 }
-                core.ajax_headers = {'Authorization': 'Bearer ' + module_token}
+                core.ajax_headers = module_token ? {'Authorization': 'Bearer ' + module_token} : {};
                 // console.log(branch_commit_url,module_name,module_token,private)
                 core.ajax_get( branch_commit_url, branch_commit_callback )
             })    
@@ -2090,14 +2090,14 @@ class core implements module
             let url = core.repos_url + source + "/branches";
             let module_token = module.data( 'source_token' );
             let private = module.data( 'private' );
-            if ( private && module_token == '' ) {
-                $( '#latest_branch_' + module_name ).after( '<span class="install-warning">Module is set to private but no source token has been set</span>' );
+            if ( module_name !== 'core' && private && module_token == '' ) {
+                $( '#latest_branch_' + module_name ).after( '<span class="install-warning">%s</span>' );
                 return;
             }
             if ( module_name === 'core' ) {
                 module_token = '$core_token';
             }
-            core.ajax_headers = {'Authorization': 'Bearer ' + module_token}
+            core.ajax_headers = module_token ? {'Authorization': 'Bearer ' + module_token} : {};
             // console.log(url,core.ajax_headers)
             let callback = function( response ) {
                 get_branches( response, module_name, private, source );
@@ -2128,7 +2128,9 @@ class core implements module
             }
             core.ajax_get( url, callback )
         });
-        SCRIPT;
+        SCRIPT,
+        TEXT_PRIVATE_MODULE_TOKEN_SET
+        );
         return $script;
     }
 

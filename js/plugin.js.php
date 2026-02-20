@@ -62,6 +62,7 @@ var plugin = plugin || {
         });
     },
     get_entities_info:function( path ) {
+        // console.log('get entities info from path',path)
         let paths = path.split( '/' );
         let entities_info = [];
         $.each( paths, function( index, path ) {
@@ -71,6 +72,7 @@ var plugin = plugin || {
         return entities_info;
     },
     load_modal_form_js:function() {
+        // console.log('in load modal form js')
         var entities_id = 0;
         if ( this.form['path'] !== undefined ) {
             entities_info = this.get_entities_info( this.form['path'] );
@@ -120,6 +122,7 @@ var plugin = plugin || {
         this.run_function( js );
     },
     run_function:function( function_name ) {
+        // console.log('in run function',function_name);
         $.each( this.modules, function( name, info ) {
             if ( window[name] ) {
                 if ( name != '' && typeof window[name][function_name] === 'function' ) {
@@ -130,6 +133,7 @@ var plugin = plugin || {
         if ( typeof this[function_name] === 'function' ) this[function_name]();
     },
     run_module_action:function( module ) {
+        // console.log('in run module action function',module);
         let callback = function( response ) {
             alert(`Module action ${module} was run - check console for response`);
             console.log(response);
@@ -161,6 +165,7 @@ var plugin = plugin || {
         }
     },
     get_form:function() {
+        // console.log('in get form function - form element is',this.form_element)
         plugin.form = {}
         // console.log('in get_form function',plugin.form)
         // let action = ( $( '#export-form' ).length > 0 ) ? $( 'form' ).prop( 'action' ) : this.form_element.prop( 'action' );
@@ -192,6 +197,7 @@ var plugin = plugin || {
         // console.log('in get_form functionn - this.form is ',this.form)
     },
     get_form_hidden_inputs:function() {
+        // console.log('in get form hidden inputs function')
         let obj = this;
         let hidden_input_elements = this.form['info']['element'].find( 'input[type="hidden"]' );
         $.each( hidden_input_elements, function( index, element ) {
@@ -201,6 +207,7 @@ var plugin = plugin || {
         });
     },
     wait_until_exists:function( selector ) {
+        // console.log('wait until exists',selector)
         return new Promise( resolve => {
             if ( document.querySelector( selector ) ) {
                 return resolve( document.querySelector( selector ) );
@@ -219,6 +226,7 @@ var plugin = plugin || {
         });
     },
     wait_until_modal_exists:function( modal_id ) {
+        // console.log('wait until modal exists',modal_id)
         let selector = `#${modal_id}`;
         // console.log('wait until modal exists',modal_id,selector)
         plugin.wait_until_exists( selector ).then( function( element ) {
@@ -246,7 +254,7 @@ var plugin = plugin || {
         });  
     },
     get_modal_url:function( element ) {
-        // console.log(element);
+        // console.log('in get modal url function',element);
         var url = 'get_modal_url function url - here for development';
         let target = $( element.currentTarget );
         if ( target.prop( 'onclick' )  ) {
