@@ -60,42 +60,43 @@ class plugin
 
     private function set_modules()
     {
-        // $dirs = glob( $this->plugin_path . 'modules/*', GLOB_ONLYDIR );
-        // $modules = array();
-        // foreach ( $dirs as $dir )
-        // {
-        //     $module_name = basename( $dir );
-        //     $module_info = $module_info = json_decode( file_get_contents( $dir . '/module.json' ), true );
-        //     $module_data = array(
-        //         'name' => $module_name,
-        //         'app_path' => PLUGIN_NAME . '/' . $module_name . '/',
-        //         'path' => $dir . '/',
-        //         'info' => $module_info,
-        //     );
-        //     $modules[$module_name] = $module_data;
-        //     if ( $module_name === 'core' )
-        //     {
-        //         // $this->core = $module_data;
-        //     }
-        //     else 
-        //     {
-        //         // $modules[$module_name] = $module_data;
-        //     }
-        // }
-        $modules = get_plugin_modules( $this->plugin_path );
-        foreach ( $modules as $module_name => $module )
+        // Discover all modules in the plugin
+        $modules = glob( PLUGIN_MODULES_PATH . '*', GLOB_ONLYDIR );
+        // Load and instantiate each module class
+        foreach ( $modules as $module_path )
         {
-            if ( $module_name === 'core' )
+            $module_name = basename( $module_path );
+            $module_info = json_decode( file_get_contents( $module_path . '/module.json' ), true );
+            $this->modules[$module_name] = array(
+                'name' => $module_name,
+                'path' => $module_path . '/',
+                'app_path' => PLUGIN_NAME . '/' . $module_name . '/',
+                'info' => $module_info
+            );
+            $module_class_file = $module_path . '/includes/classes/' . $module_name . '.php';
+            
+            // Check if module class file exists
+            if ( file_exists( $module_class_file ) )
             {
-                // $this->core = $module_data;
+                // Load the module class file
+                require_once( $module_class_file );
+                
+                // Create instance of the module class (e.g., $core)
+                // Use fully qualified class name with namespace
+                $module_class = __NAMESPACE__ . '\\' . $module_name;
+                
+                // Check if class exists and can be instantiated
+                if ( class_exists( $module_class ) )
+                {
+                    // Create dynamic variable with module name (e.g., $core)
+                    ${$module_name} = new $module_class();
+                    
+                    // Make module instance available globally
+                    global ${$module_name};
+                }
             }
-            else 
-            {
-                // $modules[$module_name] = $module_data;
-            }    
         }
-        $this->modules = $modules;
-        // $this->all_modules = array_merge( array( 'core' => $this->core ), $this->modules );
+        // die(print_rr($this));
     }
       
     public function set_user_access()

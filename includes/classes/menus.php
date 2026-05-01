@@ -33,7 +33,7 @@ class menus
     public function plugin_module_links()
     {
         $module_links = array();
-        foreach ( get_plugin_modules( PLUGIN_PATH ) as $name => $module )
+        foreach ( $this->plugin->get_modules( false ) as $name => $module )
         {
             $module_links[] = array( 'title' => $name, 'url' => url_for( $module['app_path'] . 'index' ), 'class' => 'fa-plug' );
         }
@@ -43,7 +43,7 @@ class menus
     public function plugin_modules_sidebar_menus()
     {
         $sidebar_menus = array();
-        foreach ( get_plugin_modules( PLUGIN_PATH ) as $name => $module )
+        foreach ( $this->plugin->get_modules( false ) as $name => $module )
         {
             // $sidebar_menus[] = array( 'title' => $name, 'url' => url_for( $module['app_path'] . 'index' ), 'class' => 'fa-plug' );
             if ( is_file( $module['path'] . 'menu.php' ) )

@@ -10,7 +10,7 @@ $public_actions = array();
 foreach ( $modules as $index => $module_path )
 {
     $module = basename( $module_path );
-    // print_rr("index is $index - module is $module - path is $module_path");
+    // print_rr("index is $index - module is $module - path is $module_path");      
     $public_modules_file = $module_path . '/public_modules.php';
     if ( file_exists( $public_modules_file ) )
     {   

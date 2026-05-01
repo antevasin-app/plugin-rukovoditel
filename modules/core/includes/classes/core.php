@@ -52,7 +52,7 @@ class core implements module
         $this->app_path = PLUGIN_NAME . "/$this->name/";
         $this->set_config();
         $this->set_info();
-        $this->set_modules();
+        // $this->set_modules();
         if ( isset( $app_user ) && $app_user['id'] > 0 )  
         {  
             // if ( !IS_MODULE_USER ) redirect_to( 'dashboard/access_forbidden' );
@@ -1926,11 +1926,10 @@ class core implements module
     
     public function module_management()
     {
-        $modules = get_plugin_modules( PLUGIN_PATH );
-        // print_rr($modules);
-        // unset( $modules['core'] );
+        global $this_plugin;
+
         $installed_modules = '';
-        foreach ( $modules as $module_name => $module )
+        foreach ( $this_plugin->get_modules( false ) as $module_name => $module )
         {
             // print_rr($module_name);
             $set_token = false;
