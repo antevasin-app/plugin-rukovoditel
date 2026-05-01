@@ -1,7 +1,7 @@
 {
 	"title": "Core",
   	"version": "1.0.21",
-  	"source": "antevasin-app/plugin-rukovoditel",
+  	"source": "antevasin-software/plugin-rukovoditel",
 	"private": false,
 	"description": "Core configuration module for the Antevasin Plugin"
 }
